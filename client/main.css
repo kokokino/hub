@@ -2,3 +2,57 @@ body {
   padding: 10px;
   font-family: sans-serif;
 }
+
+/* Custom styles for Kokokino Hub */                                                           
+:root {                                                                                        
+  --primary: #4a6fa5;                                                                          
+  --secondary: #166088;                                                                        
+}                                                                                              
+                                                                                               
+/* Custom header styling */                                                                    
+header nav {                                                                                   
+  margin-bottom: 2rem;                                                                         
+  border-bottom: 2px solid var(--primary);                                                     
+}                                                                                              
+                                                                                               
+/* Grid layout for apps */                                                                     
+.grid {                                                                                        
+  display: grid;                                                                               
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));                                 
+  gap: 1rem;                                                                                   
+  margin: 2rem 0;                                                                              
+}                                                                                              
+                                                                                               
+/* Article cards */                                                                            
+article {                                                                                      
+  padding: 1.5rem;                                                                             
+  border: 1px solid #dee2e6;                                                                   
+  border-radius: 0.5rem;                                                                       
+  transition: transform 0.2s, box-shadow 0.2s;                                                 
+}                                                                                              
+                                                                                               
+article:hover {                                                                                
+  transform: translateY(-2px);                                                                 
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);                                                   
+}                                                                                              
+                                                                                               
+/* Footer styling */                                                                           
+footer {                                                                                       
+  margin-top: 3rem;                                                                            
+  padding: 2rem 0;                                                                             
+  border-top: 1px solid #dee2e6;                                                               
+  text-align: center;                                                                          
+  color: #6c757d;                                                                              
+}                                                                                              
+                                                                                               
+/* Responsive adjustments */                                                                   
+@media (max-width: 768px) {                                                                    
+  .grid {                                                                                      
+    grid-template-columns: 1fr;                                                                
+  }                                                                                            
+                                                                                               
+  header nav ul {                                                                              
+    flex-direction: column;                                                                    
+    gap: 0.5rem;                                                                               
+  }                                                                                            
+}                                                                                              

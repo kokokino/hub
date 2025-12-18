@@ -10,19 +10,27 @@ Accounts.ui.config({
   passwordSignupFields: 'USERNAME_ONLY'                                                        
 });                                                                                            
                                                                                                
-// Main App Component                                                                          
-const App = {                                                                                  
+// Component to handle Blaze login buttons                                                     
+const LoginButtons = {                                                                         
   oncreate(vnode) {                                                                            
-    // Render the login buttons after the component is created                                 
-    Tracker.autorun(() => {                                                                    
-      const loginDiv = document.getElementById('login-buttons');                               
-      if (loginDiv && !loginDiv._blazeView) {                                                  
-        // Use the loginButtons template directly                                              
-        loginDiv._blazeView = Blaze.render(Template.loginButtons, loginDiv);                   
-      }                                                                                        
-    });                                                                                        
+    // Render Blaze login buttons into this component                                          
+    this.blazeView = Blaze.render(Template.loginButtons, vnode.dom);                           
   },                                                                                           
                                                                                                
+  onremove(vnode) {                                                                            
+    // Clean up when component is removed                                                      
+    if (this.blazeView) {                                                                      
+      Blaze.remove(this.blazeView);                                                            
+    }                                                                                          
+  },                                                                                           
+                                                                                               
+  view() {                                                                                     
+    return m('div');                                                                           
+  }                                                                                            
+};                                                                                             
+                                                                                               
+// Main App Component                                                                          
+const App = {                                                                                  
   view() {                                                                                     
     return m('div', [                                                                          
       m('header', [                                                                            
@@ -34,7 +42,7 @@ const App = {
             m('li', m('a[href="#"]', {onclick: () => {}}, 'Home')),                            
             m('li', m('a[href="#"]', {onclick: () => {}}, 'Apps')),                            
             m('li', m('a[href="#"]', {onclick: () => {}}, 'Billing')),                         
-            m('li', m('div#login-buttons'))                                                    
+            m('li', m(LoginButtons))                                                           
           ])                                                                                   
         ])                                                                                     
       ]),                                                                                      
@@ -90,4 +98,4 @@ const App = {
 // Mount the app when DOM is ready                                                             
 Meteor.startup(() => {                                                                         
   m.mount(document.getElementById('app'), App);                                                
-});    
+});                                                                                            

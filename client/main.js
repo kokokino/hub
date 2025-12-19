@@ -7,9 +7,9 @@ import './main.html';
                                                                                                
 // Initialize accounts configuration                                                           
 Accounts.ui.config({                                                                           
-  passwordSignupFields: 'USERNAME_ONLY'                                                        
+  passwordSignupFields: 'USERNAME_AND_EMAIL'                                                        
 });                                                                                            
-                                                                                               
+
 // Component to handle Blaze login buttons                                                     
 const LoginButtons = {                                                                         
   oncreate(vnode) {                                                                            

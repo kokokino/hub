@@ -1,0 +1,13 @@
+{
+  "public": {
+    "appName": "Kokokino Hub"
+  },
+  "private": {
+    "MAIL_URL": "smtp://username:password@smtp.example.com:587",
+    "lemonSqueezy": {
+      "storeId": "your-store-id",
+      "apiKey": "your-api-key",
+      "lemonSqueezyWebhookSecret": "your-webhook-secret"
+    }
+  }
+}

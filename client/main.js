@@ -54,7 +54,7 @@ const App = {
                                                                                                
           m('article', [                                                                       
             m('h2', 'What is Kokokino?'),                                                      
-            m('p', 'Kokokino is an open‑source COOP where creative people write games and learn from each other.'),                                                                            
+            m('p', 'Kokokino is an open‑source cooperative where creative people write games and learn from each other.'),                                                                            
             m('p', 'All games are open source but monetized through monthly subscriptions to keep the servers running.')                                                                    
           ]),                                                                                  
                                                                                                
@@ -89,7 +89,7 @@ const App = {
       ]),                                                                                      
                                                                                                
       m('footer.container-fluid', [                                                            
-        m('small', '© 2025 Kokokino COOP. All code is open source.')                           
+        m('small', `© ${new Date().getFullYear()} Kokokino. All code is open source.`)                           
       ])                                                                                       
     ]);                                                                                        
   }                                                                                            

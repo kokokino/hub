@@ -1,6 +1,10 @@
 import { Meteor } from 'meteor/meteor';
 import { Accounts } from 'meteor/accounts-base';                                                                                                            
 import { Email } from 'meteor/email';                                                                                                                       
+import '../lib/collections/users.js';
+import './methods/subscriptions.js';
+import './webhooks/lemonSqueezy.js';
+import './publications.js';
 
 Meteor.startup(() => {
   // Debug: Check if MAIL_URL is set

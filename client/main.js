@@ -13,6 +13,9 @@ Accounts.ui.config({
   passwordSignupFields: 'USERNAME_AND_EMAIL'                                                        
 });                                                                                            
 
+// Import SubscriptionButton component
+import SubscriptionButton from '/imports/ui/components/SubscriptionButton';
+
 // Create a reactive store for verification status
 const verificationStore = {
   showNotice: false,
@@ -29,6 +32,9 @@ const verificationStore = {
     }
   }
 };
+
+// Subscribe to current user data including subscription info
+Meteor.subscribe('currentUser');
 
 // Set up Tracker to monitor verification status
 Tracker.autorun(() => {
@@ -133,7 +139,15 @@ const App = {
             m('ul', [                                                                          
               m('li', [m('strong', 'Base monthly charge: $2'), ' - Access to fundamental apps and games']),                                                                                  
               m('li', 'Additional subscriptions for ambitious games with extra development costs')                                                                                        
-            ])                                                                                 
+            ]),
+            // Add subscription button here
+            m('div', {style: 'margin-top: 2rem;'},
+              m(SubscriptionButton, {
+                productId: 'base_monthly',
+                label: 'Subscribe to Kokokino Hub ($2/month)',
+                variant: 'primary'
+              })
+            )
           ]),                                                                                  
                                                                                                
           m('article', [                                                                       

@@ -6,6 +6,7 @@
     "MAIL_URL": "smtp://username:password@smtp.example.com:587",
     "lemonSqueezy": {
       "storeId": "your-store-id",
+      "storeName": "kokokino",
       "apiKey": "your-api-key",
       "lemonSqueezyWebhookSecret": "your-webhook-secret"
     }

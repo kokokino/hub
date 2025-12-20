@@ -133,6 +133,91 @@ footer {
   }
 }
 
+/* Subscription button styling */
+.subscription-status {
+  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+  border: 2px solid #4caf50;
+  border-radius: 8px;
+  padding: 1rem;
+  margin: 1.5rem 0;
+  box-shadow: 0 2px 8px rgba(76, 175, 80, 0.2);
+}
+
+.subscription-status p {
+  margin: 0.5rem 0;
+  color: #2e7d32;
+}
+
+.subscription-status .small {
+  font-size: 0.9rem;
+  color: #555;
+}
+
+/* Email verification prompt styling */
+.email-verification-prompt {
+  background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+  border: 2px solid #ff9800;
+  border-radius: 8px;
+  padding: 1rem;
+  margin: 1.5rem 0;
+  box-shadow: 0 2px 8px rgba(255, 152, 0, 0.2);
+}
+
+.email-verification-prompt p {
+  margin: 0.5rem 0;
+  color: #e65100;
+}
+
+.email-verification-prompt .small {
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.button {
+  display: inline-block;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 4px;
+  background: var(--primary, #4a6fa5);
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  font-size: 1rem;
+}
+
+.button:hover {
+  background: var(--secondary, #166088);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+.button-outline {
+  background: transparent;
+  border: 2px solid var(--primary, #4a6fa5);
+  color: var(--primary, #4a6fa5);
+}
+
+.button-outline:hover {
+  background: var(--primary, #4a6fa5);
+  color: white;
+}
+
+.button-primary {
+  background: var(--primary, #4a6fa5);
+}
+
+.button-secondary {
+  background: var(--secondary, #166088);
+}
+
 /* Make sure the notice is responsive */
 @media (max-width: 768px) {
   .verification-notice {
@@ -147,5 +232,15 @@ footer {
   .resend-button {
     width: 100%;
     text-align: center;
+  }
+  
+  .subscription-status {
+    margin: 1rem 0;
+    padding: 0.75rem;
+  }
+  
+  .email-verification-prompt {
+    margin: 1rem 0;
+    padding: 0.75rem;
   }
 }

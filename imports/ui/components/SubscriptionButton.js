@@ -1,20 +1,51 @@
 import m from 'mithril';
+import { Tracker } from 'meteor/tracker';
 
 const SubscriptionButton = {
   oninit(vnode) {
     this.loading = false;
     this.subscription = null;
+    this.userId = null; // Track user ID instead of full user object
     
-    // Load subscription status
-    Meteor.call('subscriptions.getStatus', (error, result) => {
-      if (!error) this.subscription = result;
-      m.redraw();
+    // Set up Tracker to reactively update when user changes
+    this.computation = Tracker.autorun(() => {
+      const currentUser = Meteor.user();
+      const currentUserId = currentUser ? currentUser._id : null;
+      const previousUserId = this.userId;
+      
+      // Check if user ID changed (login/logout or different user)
+      if (currentUserId !== previousUserId) {
+        this.userId = currentUserId;
+        
+        if (currentUser) {
+          // User logged in or changed - load subscription status
+          Meteor.call('subscriptions.getStatus', (error, result) => {
+            if (!error) {
+              this.subscription = result;
+            } else {
+              this.subscription = null;
+            }
+            m.redraw();
+          });
+        } else {
+          // User logged out - clear subscription data
+          this.subscription = null;
+        }
+        m.redraw();
+      }
     });
+  },
+  
+  onremove(vnode) {
+    // Clean up Tracker computation when component is destroyed
+    if (this.computation) {
+      this.computation.stop();
+    }
   },
   
   view(vnode) {
     const { productId = 'base_monthly', label = 'Subscribe', variant = 'primary' } = vnode.attrs;
-    const user = Meteor.user();
+    const user = Meteor.user(); // Get reactive user directly
     
     // If user is not logged in, show login prompt
     if (!user) {

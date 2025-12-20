@@ -3,7 +3,10 @@ import { Blaze } from 'meteor/blaze';
 import { Template } from 'meteor/templating';                                                  
 import { Tracker } from 'meteor/tracker';                                                      
 import { Accounts } from 'meteor/accounts-base';                                               
-import './main.html';                                                                          
+import './main.html';
+
+// Import Pico CSS directly from node_modules
+import '@picocss/pico/css/pico.min.css';
                                                                                                
 // Initialize accounts configuration                                                           
 Accounts.ui.config({                                                                           

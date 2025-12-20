@@ -36,5 +36,30 @@ Meteor.startup(() => {
     `;                                                                                                                                                      
   };                                                                                                                                                        
   
+  // Add method to resend verification email
+  Meteor.methods({
+    async resendVerificationEmail() {
+      const userId = this.userId;
+      if (!userId) {
+        throw new Meteor.Error('not-authorized', 'You must be logged in to resend verification email');
+      }
+      
+      const user = await Meteor.users.findOneAsync(userId);
+      if (!user || !user.emails || !user.emails[0]) {
+        throw new Meteor.Error('user-not-found', 'User not found');
+      }
+      
+      // Check if already verified
+      if (user.emails[0].verified) {
+        throw new Meteor.Error('already-verified', 'Email is already verified');
+      }
+      
+      // Send verification email
+      Accounts.sendVerificationEmail(userId, user.emails[0].address);
+      
+      return true;
+    }
+  });
+  
   // code to run on server at startup                                                                                                                       
 });

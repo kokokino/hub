@@ -10,6 +10,29 @@ Accounts.ui.config({
   passwordSignupFields: 'USERNAME_AND_EMAIL'                                                        
 });                                                                                            
 
+// Create a reactive store for verification status
+const verificationStore = {
+  showNotice: false,
+  // Function to update and trigger redraw
+  update(user) {
+    let newValue = false;
+    if (user && user.emails && user.emails[0]) {
+      newValue = !user.emails[0].verified;
+    }
+    if (this.showNotice !== newValue) {
+      this.showNotice = newValue;
+      // Trigger Mithril redraw when value changes
+      m.redraw();
+    }
+  }
+};
+
+// Set up Tracker to monitor verification status
+Tracker.autorun(() => {
+  const user = Meteor.user();
+  verificationStore.update(user);
+});
+
 // Component to handle Blaze login buttons                                                     
 const LoginButtons = {                                                                         
   oncreate(vnode) {                                                                            
@@ -28,6 +51,48 @@ const LoginButtons = {
     return m('div');                                                                           
   }                                                                                            
 };                                                                                             
+
+// Verification Notice Component
+const VerificationNotice = {
+  oninit() {
+    this.resending = false;
+  },
+  
+  resendEmail() {
+    this.resending = true;
+    Meteor.call('resendVerificationEmail', (error) => {
+      this.resending = false;
+      if (error) {
+        console.error('Failed to resend verification email:', error);
+        alert('Failed to resend verification email. Please try again later.');
+      } else {
+        alert('Verification email resent! Please check your inbox.');
+      }
+      m.redraw();
+    });
+  },
+  
+  view() {
+    if (!verificationStore.showNotice) return null;
+    
+    return m('div.verification-notice', 
+      [
+        m('div.notice-content', [
+          m('strong.notice-title', 'Email Verification Required'),
+          m('p.notice-message', 
+            'Please check your email and click the verification link to complete your account setup.'),
+          m('button.resend-button', 
+            {
+              onclick: () => this.resendEmail(),
+              disabled: this.resending
+            },
+            this.resending ? 'Sending...' : 'Resend Email'
+          )
+        ])
+      ]
+    );
+  }
+};
                                                                                                
 // Main App Component                                                                          
 const App = {                                                                                  
@@ -48,6 +113,8 @@ const App = {
       ]),                                                                                      
                                                                                                
       m('main.container', [                                                                    
+        // Add verification notice at the top of main content
+        m(VerificationNotice),
         m('section', [                                                                         
           m('h1', 'Welcome to Kokokino Hub'),                                                  
           m('p', 'Your central hub for all Kokokino games and applications.'),                 

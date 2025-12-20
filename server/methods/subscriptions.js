@@ -1,5 +1,6 @@
 import { Meteor } from 'meteor/meteor';
 import { check } from 'meteor/check';
+import { isVerifiedUser } from '/imports/utils.js';
 
 Meteor.methods({
   // Get user's subscription status (client-safe)
@@ -10,7 +11,7 @@ Meteor.methods({
     
     const user = await Meteor.users.findOneAsync(this.userId);
     const subscription = user?.lemonSqueezy?.subscriptions?.[0];
-    const emailVerified = user?.emails?.[0]?.verified || false;
+    const emailVerified = isVerifiedUser(user);
     
     return {
       status: subscription?.status || 'inactive',
@@ -34,14 +35,13 @@ Meteor.methods({
     
     const user = await Meteor.users.findOneAsync(this.userId);
     const email = user?.emails?.[0]?.address;
-    const emailVerified = user?.emails?.[0]?.verified;
     
     if (!email) {
       throw new Meteor.Error('no-email', 'User has no email address');
     }
     
-    // Check if email is verified
-    if (!emailVerified) {
+    // Check if email is verified using the utility function
+    if (!isVerifiedUser(user)) {
       throw new Meteor.Error('email-not-verified', 'Please verify your email address before subscribing');
     }
     

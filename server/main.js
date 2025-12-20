@@ -5,6 +5,7 @@ import '../lib/collections/users.js';
 import './methods/subscriptions.js';
 import './webhooks/lemonSqueezy.js';
 import './publications.js';
+import { isVerifiedUser } from '/imports/utils.js';
 
 Meteor.startup(() => {
   // Debug: Check if MAIL_URL is set
@@ -49,12 +50,17 @@ Meteor.startup(() => {
       }
       
       const user = await Meteor.users.findOneAsync(userId);
-      if (!user || !user.emails || !user.emails[0]) {
+      if (!user) {
         throw new Meteor.Error('user-not-found', 'User not found');
       }
       
-      // Check if already verified
-      if (user.emails[0].verified) {
+      // Check if user has an email address
+      if (!user.emails || !user.emails[0]) {
+        throw new Meteor.Error('no-email', 'User has no email address');
+      }
+      
+      // Check if already verified using the utility function
+      if (isVerifiedUser(user)) {
         throw new Meteor.Error('already-verified', 'Email is already verified');
       }
       

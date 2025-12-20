@@ -1,5 +1,6 @@
 import m from 'mithril';
 import { Tracker } from 'meteor/tracker';
+import { isVerifiedUser } from '/imports/utils.js';
 
 const SubscriptionButton = {
   oninit(vnode) {
@@ -52,8 +53,8 @@ const SubscriptionButton = {
       return m('p', 'Please log in to subscribe.');
     }
     
-    // Check if user's email is verified
-    const emailVerified = user.emails && user.emails[0] && user.emails[0].verified;
+    // Check if user's email is verified using the utility function
+    const emailVerified = isVerifiedUser(user);
     
     // If user is logged in but email is not verified
     if (!emailVerified) {

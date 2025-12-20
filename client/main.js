@@ -15,18 +15,18 @@ Accounts.ui.config({
 
 // Import SubscriptionButton component
 import SubscriptionButton from '/imports/ui/components/SubscriptionButton';
+import { isVerifiedUser } from '/imports/utils.js';
 
 // Create a reactive store for verification status
 const verificationStore = {
   showNotice: false,
   // Function to update and trigger redraw
   update(user) {
-    let newValue = false;
-    if (user && user.emails && user.emails[0]) {
-      newValue = !user.emails[0].verified;
-    }
-    if (this.showNotice !== newValue) {
-      this.showNotice = newValue;
+    let isNotVerifiedUser = user // Does user object exist?
+                            && user._id // Has it been saved previously to the server? If it has an _id it was.
+                            && !isVerifiedUser(user);
+    if (this.showNotice !== isNotVerifiedUser) {
+      this.showNotice = isNotVerifiedUser;
       // Trigger Mithril redraw when value changes
       m.redraw();
     }

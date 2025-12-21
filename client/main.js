@@ -1,21 +1,26 @@
-import m from 'mithril';                                                                       
-import { Blaze } from 'meteor/blaze';                                                          
-import { Template } from 'meteor/templating';                                                  
-import { Tracker } from 'meteor/tracker';                                                      
-import { Accounts } from 'meteor/accounts-base';                                               
+import m from 'mithril';
+import { Blaze } from 'meteor/blaze';
+import { Template } from 'meteor/templating';
+import { Tracker } from 'meteor/tracker';
+import { Accounts } from 'meteor/accounts-base';
 import './main.html';
 
 // Import Pico CSS directly from node_modules
 import '@picocss/pico/css/pico.min.css';
-                                                                                               
-// Initialize accounts configuration                                                           
-Accounts.ui.config({                                                                           
-  passwordSignupFields: 'USERNAME_AND_EMAIL'                                                        
-});                                                                                            
 
-// Import SubscriptionButton component
+// Import page components
+import HomePage from '/imports/ui/pages/HomePage.js';
+import ContactPage from '/imports/ui/pages/Contact.js';
+import AboutPage from '/imports/ui/pages/About.js';
+import PrivacyPolicyPage from '/imports/ui/pages/PrivacyPolicy.js';
+import SecurePaymentsPage from '/imports/ui/pages/SecurePayments.js';
 import SubscriptionButton from '/imports/ui/components/SubscriptionButton';
 import { isVerifiedUser } from '/imports/utils.js';
+
+// Initialize accounts configuration
+Accounts.ui.config({
+  passwordSignupFields: 'USERNAME_AND_EMAIL'
+});
 
 // Create a reactive store for verification status
 const verificationStore = {
@@ -42,31 +47,31 @@ Tracker.autorun(() => {
   verificationStore.update(user);
 });
 
-// Component to handle Blaze login buttons                                                     
-const LoginButtons = {                                                                         
-  oncreate(vnode) {                                                                            
-    // Render Blaze login buttons into this component                                          
-    this.blazeView = Blaze.render(Template.loginButtons, vnode.dom);                           
-  },                                                                                           
-                                                                                               
-  onremove(vnode) {                                                                            
-    // Clean up when component is removed                                                      
-    if (this.blazeView) {                                                                      
-      Blaze.remove(this.blazeView);                                                            
-    }                                                                                          
-  },                                                                                           
-                                                                                               
-  view() {                                                                                     
-    return m('div');                                                                           
-  }                                                                                            
-};                                                                                             
+// Component to handle Blaze login buttons
+const LoginButtons = {
+  oncreate(vnode) {
+    // Render Blaze login buttons into this component
+    this.blazeView = Blaze.render(Template.loginButtons, vnode.dom);
+  },
+
+  onremove(vnode) {
+    // Clean up when component is removed
+    if (this.blazeView) {
+      Blaze.remove(this.blazeView);
+    }
+  },
+
+  view() {
+    return m('div');
+  }
+};
 
 // Verification Notice Component
 const VerificationNotice = {
   oninit() {
     this.resending = false;
   },
-  
+
   resendEmail() {
     this.resending = true;
     Meteor.call('resendVerificationEmail', (error) => {
@@ -80,17 +85,17 @@ const VerificationNotice = {
       m.redraw();
     });
   },
-  
+
   view() {
     if (!verificationStore.showNotice) return null;
-    
-    return m('div.verification-notice', 
+
+    return m('div.verification-notice',
       [
         m('div.notice-content', [
           m('strong.notice-title', 'Email Verification Required'),
-          m('p.notice-message', 
+          m('p.notice-message',
             'Please check your email and click the verification link to complete your account setup.'),
-          m('button.resend-button', 
+          m('button.resend-button',
             {
               onclick: () => this.resendEmail(),
               disabled: this.resending
@@ -102,84 +107,86 @@ const VerificationNotice = {
     );
   }
 };
-                                                                                               
-// Main App Component                                                                          
-const App = {                                                                                  
+
+// Helper function for route links
+function routeLink(path) {
+  return {
+    href: path,
+    onclick: function(e) {
+      e.preventDefault();
+      m.route.set(path);
+    }
+  };
+}
+
+// Header Component
+const Header = {
   view() {
-    return m('div', [                                                                          
-      m('header', [                                                                            
-        m('nav.container-fluid', [                                                             
-          m('ul', [                                                                            
-            m('li', m('strong', 'Kokokino Hub'))                                               
-          ]),                                                                                  
-          m('ul', [                                                                            
-            // m('li', m('a[href="#"]', {onclick: () => {}}, 'Home')),                            
-            // m('li', m('a[href="#"]', {onclick: () => {}}, 'Apps')),                            
-            // m('li', m('a[href="#"]', {onclick: () => {}}, 'Billing')),                         
-            m('li', m(LoginButtons))                                                           
-          ])                                                                                   
-        ])                                                                                     
-      ]),                                                                                      
-                                                                                               
-      m('main.container', [                                                                    
-        // Add verification notice at the top of main content
-        m(VerificationNotice),
-        m('section', [                                                                         
-          m('h1', 'Welcome to Kokokino Hub'),                                                  
-          m('p', 'Your central hub for all Kokokino games and applications.'),                 
-                                                                                               
-          m('article', [                                                                       
-            m('h2', 'What is Kokokino?'),                                                      
-            m('p', 'Kokokino is an open‑source cooperative where creative people write games and learn from each other.'),                                                                            
-            m('p', 'All games are open source but monetized through monthly subscriptions to keep the servers running.')                                                                    
-          ]),                                                                                  
-                                                                                               
-          m('article', [                                                                       
-            m('h2', 'Subscription Model'),                                                     
-            m('ul', [                                                                          
-              m('li', [m('strong', 'Base monthly charge: $2'), ' - Access to fundamental apps and games']),                                                                                  
-              m('li', 'Additional subscriptions for ambitious games with extra development costs')                                                                                        
-            ]),
-            // Add subscription button here
-            m('div', {style: 'margin-top: 2rem;'},
-              m(SubscriptionButton, {
-                productId: Meteor.settings.public?.lemonSqueezy?.baseMonthlyProductID,
-                label: 'Subscribe to Kokokino Hub ($2/month)',
-                variant: 'primary'
-              })
-            )
-          ]),                                                                                  
-                                                                                               
-          m('article', [                                                                       
-            m('h2', 'Available Apps'),                                                         
-            m('div.grid', [                                                                    
-              m('div', [                                                                       
-                m('article', [                                                                 
-                  m('h3', 'Backlog Beacon'),                                                   
-                  m('p', 'Track your personal video game collection'),                         
-                  m('footer', m('small', 'Included in base subscription'))                     
-                ])                                                                             
-              ]),                                                                              
-              m('div', [                                                                       
-                m('article', [                                                                 
-                  m('h3', 'Coming Soon'),                                                      
-                  m('p', 'More games and apps from our community'),                            
-                  m('footer', m('small', 'Various subscription levels'))                       
-                ])                                                                             
-              ])                                                                               
-            ])                                                                                 
-          ])                                                                                   
-        ])                                                                                     
-      ]),                                                                                      
-                                                                                               
-      m('footer.container-fluid', [                                                            
-        m('small', `© ${new Date().getFullYear()} Kokokino. All code is open source.`)                           
-      ])                                                                                       
-    ]);                                                                                        
-  }                                                                                            
-};                                                                                             
-                                                                                               
-// Mount the app when DOM is ready                                                             
-Meteor.startup(() => {                                                                         
-  m.mount(document.getElementById('app'), App);                                                
-});                                                                                            
+    return m('header', [
+      m('nav.container-fluid', [
+        m('ul', [
+          m('li', m('strong', 'Kokokino Hub'))
+        ]),
+        m('ul', [
+          m('li', m('a', routeLink('/'), 'Home')),
+          m('li', m('a', routeLink('/contact'), 'Contact')),
+          m('li', m(LoginButtons))
+        ])
+      ])
+    ]);
+  }
+};
+
+// Footer Component
+const Footer = {
+  view() {
+    return m('footer.container-fluid', [
+      m('div', { style: 'display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;' }, [
+        m('ul', { style: 'display: flex; gap: 1.5rem; margin: 0; padding: 0; list-style: none;' }, [
+          m('li', m('a', routeLink('/contact'), 'Contact')),
+          m('li', m('a', routeLink('/about'), 'About')),
+          m('li', m('a', routeLink('/privacy'), 'Privacy Policy')),
+          m('li', m('a', routeLink('/secure-payments'), 'Secure Payments')),
+          m('li', m('a[href="https://github.com/kokokino/hub"]', { target: '_blank', rel: 'noopener noreferrer' }, 'GitHub'))
+        ]),
+        m('small', `© ${new Date().getFullYear()} Kokokino. All code is open source.`)
+      ])
+    ]);
+  }
+};
+
+// Main App Component
+const App = {
+  view() {
+    const route = m.route.get();
+    let page;
+    if (route === '/contact') page = ContactPage;
+    else if (route === '/about') page = AboutPage;
+    else if (route === '/privacy') page = PrivacyPolicyPage;
+    else if (route === '/secure-payments') page = SecurePaymentsPage;
+    else page = HomePage;
+
+    return m('div', [
+      m(Header),
+      m('main.container', [
+        route === '/' ? m(VerificationNotice) : null,
+        m(page)
+      ]),
+      m(Footer)
+    ]);
+  }
+};
+
+// Define routes
+const routes = {
+  '/': App,
+  '/contact': App,
+  '/about': App,
+  '/privacy': App,
+  '/secure-payments': App
+};
+
+// Mount the app when DOM is ready
+Meteor.startup(() => {
+  m.route(document.getElementById('app'), '/', routes);
+});

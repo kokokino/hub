@@ -3,59 +3,117 @@ body {
   font-family: sans-serif;
 }
 
-/* Custom styles for Kokokino Hub */                                                           
-:root {                                                                                        
-  --primary: #4a6fa5;                                                                          
-  --secondary: #166088;                                                                        
-}                                                                                              
-                                                                                               
-/* Custom header styling */                                                                    
-header nav {                                                                                   
-  margin-bottom: 2rem;                                                                         
-  border-bottom: 2px solid var(--primary);                                                     
-}                                                                                              
-                                                                                               
-/* Grid layout for apps */                                                                     
-.grid {                                                                                        
-  display: grid;                                                                               
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));                                 
-  gap: 1rem;                                                                                   
-  margin: 2rem 0;                                                                              
-}                                                                                              
-                                                                                               
-/* Article cards */                                                                            
-article {                                                                                      
-  padding: 1.5rem;                                                                             
-  border: 1px solid #dee2e6;                                                                   
-  border-radius: 0.5rem;                                                                       
-  transition: transform 0.2s, box-shadow 0.2s;                                                 
-}                                                                                              
-                                                                                               
-article:hover {                                                                                
-  transform: translateY(-2px);                                                                 
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);                                                   
-}                                                                                              
-                                                                                               
-/* Footer styling */                                                                           
-footer {                                                                                       
-  margin-top: 3rem;                                                                            
-  padding: 2rem 0;                                                                             
-  border-top: 1px solid #dee2e6;                                                               
-  text-align: center;                                                                          
-  color: #6c757d;                                                                              
-}                                                                                              
-                                                                                               
-/* Responsive adjustments */                                                                   
-@media (max-width: 768px) {                                                                    
-  .grid {                                                                                      
-    grid-template-columns: 1fr;                                                                
-  }                                                                                            
-                                                                                               
-  header nav ul {                                                                              
-    flex-direction: column;                                                                    
-    gap: 0.5rem;                                                                               
-  }                                                                                            
-}                                                                                              
+/* Custom styles for Kokokino Hub */
+:root {
+  --primary: #4a6fa5;
+  --secondary: #166088;
+}
+
+/* Custom header styling */
+header nav {
+  margin-bottom: 2rem;
+  border-bottom: 2px solid var(--primary);
+}
+
+/* Grid layout for apps */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1rem;
+  margin: 2rem 0;
+}
+
+/* Article cards */
+article {
+  padding: 1.5rem;
+  border: 1px solid #dee2e6;
+  border-radius: 0.5rem;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+article:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Footer styling */
+footer {
+  margin-top: 3rem;
+  padding: 2rem 0;
+  border-top: 1px solid #dee2e6;
+  color: #6c757d;
+}
+
+/* Footer link styling */
+footer ul {
+  list-style: none;
+  display: flex;
+  gap: 1.5rem;
+  margin: 0;
+  padding: 0;
+  flex-wrap: wrap;
+}
+
+footer ul li a {
+  color: var(--primary, #4a6fa5);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+footer ul li a:hover {
+  color: var(--secondary, #166088);
+  text-decoration: underline;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  header nav ul {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  footer ul {
+    justify-content: center;
+    margin-bottom: 1rem;
+  }
+
+  footer .container-fluid > div {
+    flex-direction: column;
+    text-align: center;
+    gap: 1rem;
+  }
+
+  footer small {
+    order: 2;
+  }
+
+  footer ul {
+    order: 1;
+  }
+}
+
+/* Link styling for pages */
+a[href^="mailto:"] {
+  color: var(--primary, #4a6fa5);
+  text-decoration: none;
+}
+
+a[href^="mailto:"]:hover {
+  text-decoration: underline;
+}
+
+/* List styling for secure payments */
+ul {
+  padding-left: 1.5rem;
+}
+
+ul li {
+  margin-bottom: 0.5rem;
+}
 
 /* Email Verification Notice Styles */
 .verification-notice {

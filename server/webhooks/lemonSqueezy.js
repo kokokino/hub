@@ -49,20 +49,22 @@ WebApp.connectHandlers.use('/webhooks/lemon-squeezy', async (req, res) => {
 });
 
 async function handleWebhookEvent(event, data) {
+  if (!data.data) {
+    console.error('No data.data in webhook payload:', event);
+    return;
+  }
+  
   const { attributes } = data.data;
-  const userId = attributes.custom_data?.user_id;
-  const email = attributes.custom_data?.email;
+
+  // Lemon Squeezy puts custom_data in meta, not attributes
+  const userId = data.meta?.custom_data?.user_id;
+  
+  const email = attributes?.user_email;
   
   let targetUserId = userId;
   
-  // If no userId in custom data, try to find by email
-  if (!targetUserId && email) {
-    const user = await Meteor.users.findOneAsync({ 'emails.address': email });
-    if (user) targetUserId = user._id;
-  }
-  
   if (!targetUserId) {
-    console.error('No user found for webhook:', event, attributes.custom_data);
+    console.error('No user found for webhook:', event);
     return;
   }
   
@@ -85,28 +87,34 @@ async function handleWebhookEvent(event, data) {
 }
 
 async function handleSubscriptionCreated(userId, data) {
-  const { attributes, relationships } = data.data;
+  const { attributes } = data.data;
+  
+  // Safely extract IDs with fallbacks
+  const subscriptionId = data.data.id;
+  const customerId = attributes.customer_id;
+  const productId = attributes.product_id;
   
   const subscriptionData = {
-    subscriptionId: data.data.id,
-    customerId: relationships.customer.data.id,
-    productId: relationships.variant.data.id,
+    subscriptionId: subscriptionId,
+    customerId: customerId,
+    productId: productId,
     productName: attributes.product_name,
     status: attributes.status,
-    renewsAt: new Date(attributes.renews_at),
-    createdAt: new Date(attributes.created_at),
-    updatedAt: new Date(attributes.updated_at),
-    currentPeriodEndsAt: new Date(attributes.current_period_ends_at)
+    renewsAt: attributes.renews_at ? new Date(attributes.renews_at) : null,
+    createdAt: attributes.created_at ? new Date(attributes.created_at) : new Date(),
+    updatedAt: attributes.updated_at ? new Date(attributes.updated_at) : new Date()
   };
+  
+  const validUntil = subscriptionData.renewsAt;
   
   await Meteor.users.updateAsync(userId, {
     $set: {
-      'lemonSqueezy.customerId': relationships.customer.data.id,
+      'lemonSqueezy.customerId': customerId,
       'lemonSqueezy.subscriptions': [subscriptionData],
       'lemonSqueezy.lastWebhookReceived': new Date(),
       'subscription.status': 'active',
       'subscription.planName': subscriptionData.productName,
-      'subscription.validUntil': subscriptionData.currentPeriodEndsAt
+      'subscription.validUntil': validUntil
     }
   });
 }
@@ -114,24 +122,32 @@ async function handleSubscriptionCreated(userId, data) {
 async function handleSubscriptionUpdated(userId, data) {
   const { attributes, relationships } = data.data;
   
+  // Safely extract IDs with fallbacks
+  const subscriptionId = data.data.id;
+  const customerId = attributes.customer_id;
+  const productId = attributes.product_id;
+  
   const subscriptionData = {
-    subscriptionId: data.data.id,
-    customerId: relationships.customer.data.id,
-    productId: relationships.variant.data.id,
+    subscriptionId: subscriptionId,
+    customerId: customerId,
+    productId: productId,
     productName: attributes.product_name,
     status: attributes.status,
-    renewsAt: new Date(attributes.renews_at),
-    createdAt: new Date(attributes.created_at),
-    updatedAt: new Date(attributes.updated_at),
-    currentPeriodEndsAt: new Date(attributes.current_period_ends_at)
+    renewsAt: attributes.renews_at ? new Date(attributes.renews_at) : null,
+    createdAt: attributes.created_at ? new Date(attributes.created_at) : new Date(),
+    updatedAt: attributes.updated_at ? new Date(attributes.updated_at) : new Date()
   };
   
+  // Use renews_at for validUntil if current_period_ends_at is not available
+  const validUntil = subscriptionData.renewsAt;
+  
+  // Update or add subscription
   await Meteor.users.updateAsync(userId, {
     $set: {
       'lemonSqueezy.lastWebhookReceived': new Date(),
       'subscription.status': attributes.status,
       'subscription.planName': subscriptionData.productName,
-      'subscription.validUntil': subscriptionData.currentPeriodEndsAt
+      'subscription.validUntil': validUntil
     },
     $addToSet: {
       'lemonSqueezy.subscriptions': subscriptionData
@@ -145,7 +161,7 @@ async function handleSubscriptionCancelled(userId, data) {
   await Meteor.users.updateAsync(userId, {
     $set: {
       'subscription.status': 'cancelled',
-      'subscription.validUntil': new Date(attributes.current_period_ends_at),
+      'subscription.validUntil': attributes.ends_at ? new Date(attributes.ends_at) : null,
       'lemonSqueezy.lastWebhookReceived': new Date()
     },
     $pull: {
@@ -160,7 +176,7 @@ async function handleSubscriptionExpired(userId, data) {
   await Meteor.users.updateAsync(userId, {
     $set: {
       'subscription.status': 'expired',
-      'subscription.validUntil': new Date(attributes.current_period_ends_at),
+      'subscription.validUntil': attributes.ends_at ? new Date(attributes.ends_at) : null,
       'lemonSqueezy.lastWebhookReceived': new Date()
     },
     $pull: {

@@ -1,6 +1,9 @@
 {
   "public": {
-    "appName": "Kokokino Hub"
+    "appName": "Kokokino Hub", 
+    "lemonSqueezy": {
+      "baseMonthlyProductID": "your-product-id", 
+    }
   },
   "private": {
     "MAIL_URL": "smtp://username:password@smtp.example.com:587",

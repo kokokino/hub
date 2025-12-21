@@ -48,7 +48,8 @@ Meteor.methods({
     // In a real implementation, you would call Lemon Squeezy API here
     // For MVP, we'll use direct checkout URLs
     const storeName = Meteor.settings.private.lemonSqueezy?.storeName || 'kokokino';
-    const checkoutUrl = `https://${storeName}.lemonsqueezy.com/checkout/buy/${productId}?checkout[custom][user_id]=${this.userId}&checkout[email]=${encodeURIComponent(email)}`;
+    // Lemon Squeezy custom data format: checkout[custom][key]=value
+    const checkoutUrl = `https://${storeName}.lemonsqueezy.com/checkout/buy/${productId}?checkout[email]=${encodeURIComponent(email)}&checkout[custom][user_id]=${this.userId}&checkout[custom][email]=${encodeURIComponent(email)}`;
     
     return {
       checkoutUrl: checkoutUrl,

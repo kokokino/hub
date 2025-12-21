@@ -105,7 +105,7 @@ const VerificationNotice = {
                                                                                                
 // Main App Component                                                                          
 const App = {                                                                                  
-  view() {                                                                                     
+  view() {
     return m('div', [                                                                          
       m('header', [                                                                            
         m('nav.container-fluid', [                                                             
@@ -143,7 +143,7 @@ const App = {
             // Add subscription button here
             m('div', {style: 'margin-top: 2rem;'},
               m(SubscriptionButton, {
-                productId: 'base_monthly',
+                productId: Meteor.settings.public?.lemonSqueezy?.baseMonthlyProductID,
                 label: 'Subscribe to Kokokino Hub ($2/month)',
                 variant: 'primary'
               })

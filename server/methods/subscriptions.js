@@ -13,13 +13,27 @@ Meteor.methods({
     const subscription = user?.lemonSqueezy?.subscriptions?.[0];
     const emailVerified = isVerifiedUser(user);
     
+    // Get validUntil from user.subscription.validUntil (set by webhooks)
+    // If not found there, try to get it from the subscription object
+    const validUntil = user?.subscription?.validUntil || subscription?.validUntil;
+    const validUntilDate = validUntil ? new Date(validUntil) : null;
+    
+    // Check if subscription is still valid based on validUntil date
+    const now = new Date();
+    const isSubscriptionValid = validUntilDate && validUntilDate > now;
+    
     return {
       status: subscription?.status || 'inactive',
       planName: subscription?.productName || 'No subscription',
-      validUntil: subscription?.renewsAt,
+      validUntil: validUntil,
       emailVerified: emailVerified,
       // Use the customer portal URL from Lemon Squeezy webhook data
-      manageUrl: subscription?.customerPortalUrl || null
+      manageUrl: subscription?.customerPortalUrl || null,
+      // Add a flag to indicate if subscription is currently valid
+      isValid: isSubscriptionValid,
+      // Include additional fields for debugging
+      renewsAt: subscription?.renewsAt,
+      endsAt: subscription?.endsAt
     };
   },
   

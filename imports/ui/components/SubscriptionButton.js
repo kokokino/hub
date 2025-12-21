@@ -68,15 +68,43 @@ const SubscriptionButton = {
       ]);
     }
     
-    // User has active subscription
-    if (this.subscription?.status === 'active') {
+    // Check if subscription is still valid based on validUntil date
+    const now = new Date();
+    let validUntil = this.subscription?.validUntil;
+    
+    // If validUntil is not available, try to get it from subscription data
+    if (!validUntil && this.subscription) {
+      // Try to find a valid date from subscription data
+      if (this.subscription.renewsAt) {
+        validUntil = this.subscription.renewsAt;
+      } else if (this.subscription.endsAt) {
+        validUntil = this.subscription.endsAt;
+      }
+    }
+    
+    const validUntilDate = validUntil ? new Date(validUntil) : null;
+    const isSubscriptionValid = validUntilDate && validUntilDate > now;
+    
+    // User has valid subscription (active or cancelled but not expired)
+    if (isSubscriptionValid) {
+      const isActive = this.subscription?.status === 'active';
+      const isCancelled = this.subscription?.status === 'cancelled';
+      
+      let statusText = 'Active: ';
+      let untilText = 'Renews: ';
+      if (isCancelled) {
+        statusText = 'Active (cancelled, ends ';
+        untilText = 'Valid until: ';
+      }
+      
       return m('div.subscription-status', [
         m('p', [
-          m('strong', 'Active: '),
-          this.subscription.planName
+          m('strong', statusText),
+          this.subscription.planName,
+          isCancelled ? ')' : ''
         ]),
         m('p.small', [
-          'Renews: ',
+          untilText,
           new Date(this.subscription.validUntil).toLocaleDateString()
         ]),
         this.subscription.manageUrl && m('a', {
@@ -88,7 +116,7 @@ const SubscriptionButton = {
       ]);
     }
     
-    // No subscription - show subscribe button (only if email is verified)
+    // No valid subscription - show subscribe button (only if email is verified)
     return m('button', {
       class: `button button-${variant}`,
       disabled: this.loading,

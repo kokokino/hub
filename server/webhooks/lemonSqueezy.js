@@ -126,6 +126,9 @@ function buildSubscriptionData(data) {
   const { attributes } = data.data;
   const subscriptionId = data.data.id;
   
+  // Calculate validUntil based on subscription status and attributes
+  const validUntil = determineValidUntil(attributes);
+  
   return {
     subscriptionId: subscriptionId,
     customerId: attributes.customer_id,
@@ -144,6 +147,8 @@ function buildSubscriptionData(data) {
     } : null,
     // Customer portal URL for managing the subscription
     customerPortalUrl: attributes.urls?.customer_portal || null,
+    // Store validUntil in the subscription data for easy access
+    validUntil: validUntil,
     createdAt: attributes.created_at ? new Date(attributes.created_at) : new Date(),
     updatedAt: attributes.updated_at ? new Date(attributes.updated_at) : new Date()
   };
@@ -231,7 +236,6 @@ async function upsertSubscription(userId, subscriptionData, topLevelFields) {
 async function handleSubscriptionCreated(userId, data) {
   const { attributes } = data.data;
   const subscriptionData = buildSubscriptionData(data);
-  const validUntil = determineValidUntil(attributes);
   
   await Meteor.users.updateAsync(userId, {
     $set: {
@@ -240,7 +244,7 @@ async function handleSubscriptionCreated(userId, data) {
       'lemonSqueezy.lastWebhookReceived': new Date(),
       'subscription.status': attributes.status,
       'subscription.planName': subscriptionData.productName,
-      'subscription.validUntil': validUntil
+      'subscription.validUntil': subscriptionData.validUntil
     }
   });
 }
@@ -252,12 +256,11 @@ async function handleSubscriptionCreated(userId, data) {
 async function handleSubscriptionUpdated(userId, data) {
   const { attributes } = data.data;
   const subscriptionData = buildSubscriptionData(data);
-  const validUntil = determineValidUntil(attributes);
   
   await upsertSubscription(userId, subscriptionData, {
     'subscription.status': attributes.status,
     'subscription.planName': subscriptionData.productName,
-    'subscription.validUntil': validUntil
+    'subscription.validUntil': subscriptionData.validUntil
   });
 }
 
@@ -269,15 +272,10 @@ async function handleSubscriptionPaused(userId, data) {
   const { attributes } = data.data;
   const subscriptionData = buildSubscriptionData(data);
   
-  // For paused subscriptions, validUntil is when it resumes (or null for indefinite pause)
-  const validUntil = attributes.pause?.resumes_at 
-    ? new Date(attributes.pause.resumes_at) 
-    : null;
-  
   await upsertSubscription(userId, subscriptionData, {
     'subscription.status': 'paused',
     'subscription.planName': subscriptionData.productName,
-    'subscription.validUntil': validUntil
+    'subscription.validUntil': subscriptionData.validUntil
   });
 }
 
@@ -288,12 +286,11 @@ async function handleSubscriptionPaused(userId, data) {
 async function handleSubscriptionResumed(userId, data) {
   const { attributes } = data.data;
   const subscriptionData = buildSubscriptionData(data);
-  const validUntil = determineValidUntil(attributes);
   
   await upsertSubscription(userId, subscriptionData, {
     'subscription.status': 'active',
     'subscription.planName': subscriptionData.productName,
-    'subscription.validUntil': validUntil
+    'subscription.validUntil': subscriptionData.validUntil
   });
 }
 
@@ -304,13 +301,12 @@ async function handleSubscriptionResumed(userId, data) {
 async function handleSubscriptionPaymentFailed(userId, data) {
   const { attributes } = data.data;
   const subscriptionData = buildSubscriptionData(data);
-  const validUntil = determineValidUntil(attributes);
   
   // Use the status from Lemon Squeezy (past_due, unpaid, etc.)
   await upsertSubscription(userId, subscriptionData, {
     'subscription.status': attributes.status,
     'subscription.planName': subscriptionData.productName,
-    'subscription.validUntil': validUntil
+    'subscription.validUntil': subscriptionData.validUntil
   });
 }
 
@@ -321,12 +317,11 @@ async function handleSubscriptionPaymentFailed(userId, data) {
 async function handleSubscriptionPaymentSuccess(userId, data) {
   const { attributes } = data.data;
   const subscriptionData = buildSubscriptionData(data);
-  const validUntil = determineValidUntil(attributes);
   
   await upsertSubscription(userId, subscriptionData, {
     'subscription.status': attributes.status, // Should be 'active'
     'subscription.planName': subscriptionData.productName,
-    'subscription.validUntil': validUntil
+    'subscription.validUntil': subscriptionData.validUntil
   });
 }
 
@@ -337,12 +332,11 @@ async function handleSubscriptionPaymentSuccess(userId, data) {
 async function handleSubscriptionPlanChanged(userId, data) {
   const { attributes } = data.data;
   const subscriptionData = buildSubscriptionData(data);
-  const validUntil = determineValidUntil(attributes);
   
   await upsertSubscription(userId, subscriptionData, {
     'subscription.status': attributes.status,
     'subscription.planName': subscriptionData.productName,
-    'subscription.validUntil': validUntil
+    'subscription.validUntil': subscriptionData.validUntil
   });
 }
 
@@ -355,14 +349,11 @@ async function handleSubscriptionCancelled(userId, data) {
   const { attributes } = data.data;
   const subscriptionData = buildSubscriptionData(data);
   
-  // ends_at is when the subscription actually ends (end of current period)
-  const validUntil = attributes.ends_at ? new Date(attributes.ends_at) : null;
-  
   // Update the subscription in the array (don't remove it yet - user still has access)
   await upsertSubscription(userId, subscriptionData, {
     'subscription.status': 'cancelled',
     'subscription.planName': subscriptionData.productName,
-    'subscription.validUntil': validUntil
+    'subscription.validUntil': subscriptionData.validUntil
   });
 }
 
@@ -372,13 +363,15 @@ async function handleSubscriptionCancelled(userId, data) {
  */
 async function handleSubscriptionExpired(userId, data) {
   const { attributes } = data.data;
+  const subscriptionData = buildSubscriptionData(data);
   const subscriptionId = data.data.id;
   
   // Remove the subscription from the array since it's expired
   await Meteor.users.updateAsync(userId, {
     $set: {
       'subscription.status': 'expired',
-      'subscription.validUntil': attributes.ends_at ? new Date(attributes.ends_at) : null,
+      'subscription.planName': subscriptionData.productName,
+      'subscription.validUntil': subscriptionData.validUntil,
       'lemonSqueezy.lastWebhookReceived': new Date()
     },
     $pull: {

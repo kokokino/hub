@@ -18,10 +18,8 @@ Meteor.methods({
       planName: subscription?.productName || 'No subscription',
       validUntil: subscription?.renewsAt,
       emailVerified: emailVerified,
-      // Link to Lemon Squeezy customer portal for management
-      manageUrl: user?.lemonSqueezy?.customerId 
-        ? `https://app.lemonsqueezy.com/my-orders/${user.lemonSqueezy.customerId}`
-        : null
+      // Use the customer portal URL from Lemon Squeezy webhook data
+      manageUrl: subscription?.customerPortalUrl || null
     };
   },
   

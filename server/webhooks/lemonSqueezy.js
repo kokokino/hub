@@ -142,6 +142,8 @@ function buildSubscriptionData(data) {
       mode: attributes.pause.mode,
       resumesAt: attributes.pause.resumes_at ? new Date(attributes.pause.resumes_at) : null
     } : null,
+    // Customer portal URL for managing the subscription
+    customerPortalUrl: attributes.urls?.customer_portal || null,
     createdAt: attributes.created_at ? new Date(attributes.created_at) : new Date(),
     updatedAt: attributes.updated_at ? new Date(attributes.updated_at) : new Date()
   };

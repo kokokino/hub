@@ -113,9 +113,9 @@ const App = {
             m('li', m('strong', 'Kokokino Hub'))                                               
           ]),                                                                                  
           m('ul', [                                                                            
-            m('li', m('a[href="#"]', {onclick: () => {}}, 'Home')),                            
-            m('li', m('a[href="#"]', {onclick: () => {}}, 'Apps')),                            
-            m('li', m('a[href="#"]', {onclick: () => {}}, 'Billing')),                         
+            // m('li', m('a[href="#"]', {onclick: () => {}}, 'Home')),                            
+            // m('li', m('a[href="#"]', {onclick: () => {}}, 'Apps')),                            
+            // m('li', m('a[href="#"]', {onclick: () => {}}, 'Billing')),                         
             m('li', m(LoginButtons))                                                           
           ])                                                                                   
         ])                                                                                     

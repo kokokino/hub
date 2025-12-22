@@ -14,7 +14,7 @@ const AboutPage = {
         'At the heart of our platform is the Kokokino Hub—the central application that handles user accounts, billing, and Single Sign‑On (SSO) for all community apps. Like the hub of a wheel, it connects individual applications (the spokes) back to a secure, unified center.'
       ),
       m('p',
-        'We\'ve chosen a technology stack focused on simplicity as a super‑power: Meteor JS for real‑time apps, Mithril for clean UI development, Pico CSS for minimal styling, and Babylon JS for 3D rendering. This combination allows us to move quickly while maintaining robust, production‑ready applications.'
+        'We\'ve chosen a technology stack focused on simplicity as a super‑power: Meteor JS for real‑time apps, Mithril for clean UI development, Pico CSS for minimal styling, and Babylon JS for 3D rendering and integrated physics with Havok JS. This combination allows us to move quickly while maintaining robust, production‑ready applications.'
       ),
       m('p',
         'Our philosophy centers on open collaboration, real‑time experiences by default, and modular design. Every game in our ecosystem is open source, creating a living library of code that developers can learn from, remix, and improve upon—truly embodying the cooperative spirit.'

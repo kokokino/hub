@@ -7,6 +7,7 @@ body {
 :root {
   --primary: #4a6fa5;
   --secondary: #166088;
+  font-size: 16px; /*reduce font size somewhat*/
 }
 
 /* Custom header styling */

@@ -17,7 +17,7 @@ Meteor.publish('currentUser', function() {
   });
 });
 
-Meteor.publish('activeSubscriberCount', function() {
+Meteor.publish('activeSubscriberCount', async function() {
   const self = this;
   let count = 0;
   let initializing = true;
@@ -28,7 +28,7 @@ Meteor.publish('activeSubscriberCount', function() {
   };
   
   // Observe changes to the active subscribers cursor
-  const handle = Meteor.users.find(query, { fields: { _id: 1 } }).observeChanges({
+  const handle = await Meteor.users.find(query, { fields: { _id: 1 } }).observeChangesAsync({
     added(id) {
       count++;
       if (!initializing) {

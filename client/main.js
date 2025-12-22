@@ -115,7 +115,9 @@ const Header = {
     return m('header', [
       m('nav.container-fluid', [
         m('ul', [
-          m('li', m('strong', 'Kokokino Hub'))
+          m('li', m('strong', [
+            m('a', routeLink('/'), 'Kokokino Hub')
+          ]))
         ]),
         m('ul', [
           m('li', m('a', routeLink('/'), 'Home')),

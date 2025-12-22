@@ -1,5 +1,6 @@
 import m from 'mithril';
 import SubscriptionButton from '/imports/ui/components/SubscriptionButton';
+import SubscriberCount from '/imports/ui/components/SubscriberCount';
 import { isVerifiedUser } from '/imports/utils.js';
 
 const HomePage = {
@@ -15,10 +16,10 @@ const HomePage = {
       ]),
       
       m('article', [
-        m('h2', 'Subscription Model'),
+        m('h2', 'Base Subscription'),
         m('ul', [
           m('li', [m('strong', 'Base monthly charge: $2'), ' - Access to fundamental apps and games']),
-          m('li', 'Additional subscriptions for ambitious games with extra development costs')
+          m('li', ['Currently: ', m(SubscriberCount)])
         ]),
         m('div', 
           m(SubscriptionButton, {

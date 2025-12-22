@@ -15,7 +15,7 @@ import AboutPage from '/imports/ui/pages/About.js';
 import PrivacyPolicyPage from '/imports/ui/pages/PrivacyPolicy.js';
 import SecurePaymentsPage from '/imports/ui/pages/SecurePayments.js';
 import SubscriptionButton from '/imports/ui/components/SubscriptionButton';
-import { isVerifiedUser } from '/imports/utils.js';
+import { isVerifiedUser, routeLink } from '/imports/utils.js';
 
 // Initialize accounts configuration
 Accounts.ui.config({
@@ -108,16 +108,6 @@ const VerificationNotice = {
   }
 };
 
-// Helper function for route links
-function routeLink(path) {
-  return {
-    href: path,
-    onclick: function(e) {
-      e.preventDefault();
-      m.route.set(path);
-    }
-  };
-}
 
 // Header Component
 const Header = {

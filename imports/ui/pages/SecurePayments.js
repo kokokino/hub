@@ -1,4 +1,5 @@
 import m from 'mithril';
+import { routeLink } from '/imports/utils.js';
 
 const SecurePaymentsPage = {
   view() {
@@ -55,7 +56,7 @@ const SecurePaymentsPage = {
       m('article', [
         m('p',
           'If you have any questions about payment security or need assistance with a transaction, please don\'t hesitate to ',
-          m('a[href="/contact"]', { oncreate: m.route.link }, 'contact us'),
+          m('a', routeLink('/contact'), 'contact us'),
           '.'
         )
       ])

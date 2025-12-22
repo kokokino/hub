@@ -51,7 +51,8 @@ Tracker.autorun(() => {
 const LoginButtons = {
   oncreate(vnode) {
     // Render Blaze login buttons into this component
-    this.blazeView = Blaze.render(Template.loginButtons, vnode.dom);
+    const data = { align: 'right' };
+    this.blazeView = Blaze.renderWithData(Template.loginButtons, data, vnode.dom);
   },
 
   onremove(vnode) {

@@ -25,8 +25,8 @@ We're transitioning from a single-subscription model to a multi-product system w
   createdAt: Date,                                                                                                                                          
   updatedAt: Date,                                                                                                                                          
   createdBy: String,     // User ID who created this                                                                                                        
-  required: Boolean,     // Is this product required? (Base subscription)                                                                                   
-  active: Boolean        // Soft delete flag                                                                                                                
+  isRequired: Boolean,     // Is this product required? (Base subscription)                                                                                   
+  isActive: Boolean        // Soft delete flag                                                                                                                
 }                                                                                                                                                           
                                                                                                                                                             
 
@@ -45,7 +45,7 @@ We're transitioning from a single-subscription model to a multi-product system w
   createdAt: Date,                                                                                                                                          
   updatedAt: Date,                                                                                                                                          
   createdBy: String,     // User ID who created this                                                                                                        
-  active: Boolean        // Soft delete flag                                                                                                                
+  isActive: Boolean        // Soft delete flag                                                                                                                
 }                                                                                                                                                           
                                                                                                                                                             
 
@@ -108,7 +108,7 @@ user.lemonSqueezy: {
   subscriptions: [{                                                                                                                                         
     subscriptionId: String,                                                                                                                                 
     productId: String,      // Lemon Squeezy product ID                                                                                                     
-    checkoutUUID: String,   // Our internal product reference                                                                                               
+    checkoutUUID: String,   // Lemon Squeezy checkout UUID for link to purchase
     status: String,                                                                                                                                         
     productName: String,                                                                                                                                    
     renewsAt: Date,                                                                                                                                         
@@ -155,8 +155,8 @@ Migrations.add({
       sortOrder: 0,                                                                                                                                         
       pricePerMonthUSD: 2.00,                                                                                                                               
       isApproved: true,                                                                                                                                     
-      required: true,                                                                                                                                       
-      active: true,                                                                                                                                         
+      isRequired: true,                                                                                                                                       
+      isActive: true,                                                                                                                                         
       createdAt: new Date(),                                                                                                                                
       updatedAt: new Date(),                                                                                                                                
       createdBy: 'system'                                                                                                                                   
@@ -169,7 +169,7 @@ Migrations.add({
       productId: baseProductId,                                                                                                                             
       ageRating: 'E',                                                                                                                                       
       isApproved: true,                                                                                                                                     
-      active: true,                                                                                                                                         
+      isActive: true,                                                                                                                                         
       createdAt: new Date(),                                                                                                                                
       updatedAt: new Date(),                                                                                                                                
       createdBy: 'system'                                                                                                                                   
@@ -241,7 +241,7 @@ Meteor.methods({
   'products.getAll': function() {                                                                                                                           
     return Products.find({                                                                                                                                  
       isApproved: true,                                                                                                                                     
-      active: true                                                                                                                                          
+      isActive: true                                                                                                                                          
     }, {                                                                                                                                                    
       sort: { sortOrder: 1 }                                                                                                                                
     }).fetch();                                                                                                                                             
@@ -251,7 +251,7 @@ Meteor.methods({
     return Apps.find({                                                                                                                                      
       productId: productId,                                                                                                                                 
       isApproved: true,                                                                                                                                     
-      active: true                                                                                                                                          
+      isActive: true                                                                                                                                          
     }).fetch();                                                                                                                                             
   },                                                                                                                                                        
                                                                                                                                                             
@@ -280,7 +280,7 @@ Meteor.methods({
 Meteor.publish('products', function() {                                                                                                                     
   return Products.find({                                                                                                                                    
     isApproved: true,                                                                                                                                       
-    active: true                                                                                                                                            
+    isActive: true                                                                                                                                            
   }, {                                                                                                                                                      
     sort: { sortOrder: 1 },                                                                                                                                 
     fields: {                                                                                                                                               
@@ -296,7 +296,7 @@ Meteor.publish('products', function() {
 Meteor.publish('apps', function() {                                                                                                                         
   return Apps.find({                                                                                                                                        
     isApproved: true,                                                                                                                                       
-    active: true                                                                                                                                            
+    isActive: true                                                                                                                                            
   }, {                                                                                                                                                      
     fields: {                                                                                                                                               
       name: 1,                                                                                                                                              

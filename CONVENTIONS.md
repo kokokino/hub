@@ -16,11 +16,11 @@ We focus on simplicity as a super‑power:
 | Technology | Purpose |
 |------------|---------|
 | **JavaScript** | Unified language for both server‑side and browser‑side code |
-| **Meteor JS** | Realtime apps, user accounts, and MongoDB integration |
+| **Meteor JS v3** | Realtime apps, user accounts, and MongoDB integration |
 | **Meteor Galaxy** | To deploy our apps in the cloud |
-| **Mithril JS** | General UI, using JavaScript to craft HTML |
+| **Mithril JS v2.3** | General UI, using JavaScript to craft HTML |
 | **Pico CSS** | Concise HTML that looks good with minimal effort |
-| **Babylon JS** | 3D rendering and physics (with Havok JS built‑in) |
+| **Babylon JS v8** | 3D rendering and physics (with Havok JS built‑in) |
 | **Lemon Squeezy** | Billing and subscription management |
 
 ## The Hub App

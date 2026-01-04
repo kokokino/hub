@@ -61,7 +61,7 @@ ProductOwners (lib/collections/productOwners.js)
   role: String,         // "owner", "maintainer", "contributor"                                                                                             
   sharePercentage: Number, // Decimal percentage (0-100)                                                                                                    
   createdAt: Date,                                                                                                                                          
-  createdBy: String     // Who assigned this ownership                                                                                                      
+  createdById: String     // Who assigned this ownership: References Meteor.users._id
 }                                                                                                                                                           
                                                                                                                                                             
 
@@ -75,7 +75,7 @@ AppOwners (lib/collections/appOwners.js)
   role: String,         // "owner", "maintainer", "contributor"                                                                                             
   sharePercentage: Number, // Decimal percentage (0-100)                                                                                                    
   createdAt: Date,                                                                                                                                          
-  createdBy: String     // Who assigned this ownership                                                                                                      
+  createdById: String     // Who assigned this ownership: References Meteor.users._id
 }                                                                                                                                                           
                                                                                                                                                             
 

@@ -69,13 +69,13 @@ Set up Lemon Squeezy webhooks for subscription management. Refer to the [Lemon S
 - Lemon Squeezy – Billing and subscriptions
 
 ## Contributing
-We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md).
+We welcome contributions! Please see our [Contributing Guidelines](documentation/CONTRIBUTING.md).
 
 ## Code of Conduct
-Please review our [Code of Conduct](CODE_OF_CONDUCT.md) before participating in the community.
+Please review our [Code of Conduct](documentation/CODE_OF_CONDUCT.md) before participating in the community.
 
 ## Security
-If you discover a security vulnerability, please follow our [Security Policy](SECURITY.md).
+If you discover a security vulnerability, please follow our [Security Policy](documentation/SECURITY.md).
 
 ## License
 MIT License – see [LICENSE](LICENSE) file for details.

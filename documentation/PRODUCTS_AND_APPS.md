@@ -264,13 +264,13 @@ Migrations.add({
 - [x] Update SubscriptionButton component to work with productId
 - [x] Create ProductList component
 - [x] Update HomePage to use base product from database
+- [x] Create AppsList component (shows apps with their associated product names)
 
 ### Pending
 
 - [ ] Create admin pages for managing products/apps
 - [ ] Add approval workflows
 - [ ] Add ownership management UI
-- [ ] Create AppList component (shows apps grouped by product)
 - [ ] Create UserProducts component (shows user's current subscriptions)
 
 ## Server Methods
@@ -309,6 +309,33 @@ Publishes all approved, active products.
 
 ### `apps`
 Publishes all approved, active apps.
+
+## UI Components
+
+### `ProductList`
+Displays all approved, active products with:
+- Product name and description
+- Price per month
+- Subscriber count (using `SubscriberCount` component)
+- Subscribe button (using `SubscriptionButton` component)
+
+### `AppsList`
+Displays all approved, active apps with:
+- App name and description
+- Associated product name ("Included in {Product Name}")
+- "Coming Soon" placeholder card at the end
+
+### `SubscriberCount`
+Displays the count of active subscribers for a specific product or all products.
+- Accepts optional `productId` prop
+- Uses reactive publication for real-time updates
+
+### `SubscriptionButton`
+Handles subscription flow for a specific product:
+- Shows login prompt if not logged in
+- Shows email verification prompt if email not verified
+- Shows subscription status if already subscribed
+- Shows subscribe button with checkout flow
 
 ## Security Considerations                                                                                                                                     
 

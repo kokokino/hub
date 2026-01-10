@@ -4,6 +4,7 @@ import { Meteor } from 'meteor/meteor';
 import { Products } from '/lib/collections/products';
 import SubscriptionButton from '/imports/ui/components/SubscriptionButton';
 import ProductList from '/imports/ui/components/ProductList';
+import AppsList from '/imports/ui/components/AppsList';
 import { isVerifiedUser } from '/imports/utils.js';
 
 const HomePage = {
@@ -41,25 +42,7 @@ const HomePage = {
       
       m(ProductList),
       
-      m('article', [
-        m('h2', 'Available Apps'),
-        m('div.grid', [
-          m('div', [
-            m('article', [
-              m('h3', 'Backlog Beacon'),
-              m('p', 'Track your personal video game collection'),
-              m('footer', m('small', 'Included in base subscription'))
-            ])
-          ]),
-          m('div', [
-            m('article', [
-              m('h3', 'Coming Soon'),
-              m('p', 'More games and apps from our community'),
-              m('footer', m('small', 'Various subscription levels'))
-            ])
-          ])
-        ])
-      ])
+      m(AppsList)
     ]);
   }
 };

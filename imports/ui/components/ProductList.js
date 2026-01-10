@@ -41,11 +41,9 @@ const ProductList = {
       return m('p', 'No products available.');
     }
     
-    return m('div.product-list', [
-      m('h2', 'Available Products'),
-      this.products.map(product => 
-        m('div.product-card', { key: product._id }, [
-          m('h3', product.name),
+    return this.products.map(product => 
+        m('article', { key: product._id }, [
+          m('h2', product.name),
           m('p', product.description),
           m('p', `Price: $${product.pricePerMonthUSD.toFixed(2)}/month`),
           m(SubscriptionButton, {
@@ -54,8 +52,7 @@ const ProductList = {
             variant: 'primary'
           })
         ])
-      )
-    ]);
+      );
   }
 };
 

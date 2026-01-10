@@ -19,14 +19,15 @@ const SubscriptionButton = {
       const currentUser = Meteor.user();
       const currentUserId = currentUser ? currentUser._id : null;
       const previousUserId = this.userId;
+      const { productId } = vnode.attrs;
       
       // Check if user ID changed (login/logout or different user)
       if (currentUserId !== previousUserId) {
         this.userId = currentUserId;
         
-        if (currentUser) {
-          // User logged in or changed - load subscription status
-          Meteor.call('subscriptions.getStatus', (error, result) => {
+        if (currentUser && productId) {
+          // User logged in or changed - load subscription status for this product
+          Meteor.call('subscriptions.getStatus', productId, (error, result) => {
             if (!error) {
               this.subscription = result;
             } else {
@@ -42,7 +43,6 @@ const SubscriptionButton = {
       }
       
       // Fetch product details
-      const { productId } = vnode.attrs;
       if (productId && this.productsHandle.ready()) {
         const product = Products.findOne(productId);
         if (product) {

@@ -3,7 +3,6 @@ import { Tracker } from 'meteor/tracker';
 import { Meteor } from 'meteor/meteor';
 import { Products } from '/lib/collections/products';
 import SubscriptionButton from '/imports/ui/components/SubscriptionButton';
-import SubscriberCount from '/imports/ui/components/SubscriberCount';
 import ProductList from '/imports/ui/components/ProductList';
 import { isVerifiedUser } from '/imports/utils.js';
 
@@ -38,23 +37,6 @@ const HomePage = {
         m('h2', 'What is Kokokino?'),
         m('p', 'Kokokino is an open‑source cooperative where creative people write games and learn from each other.'),
         m('p', 'All games are open source but monetized through monthly subscriptions to keep the servers running.')
-      ]),
-      
-      m('article', [
-        m('h2', 'Base Subscription'),
-        m('ul', [
-          m('li', [m('strong', 'Base monthly charge: $2'), ' - Access to fundamental apps and games']),
-          m('li', ['Currently: ', m(SubscriberCount)])
-        ]),
-        m('div', 
-          this.baseProduct ? 
-            m(SubscriptionButton, {
-              productId: this.baseProduct._id,
-              label: `Subscribe to ${this.baseProduct.name} ($${this.baseProduct.pricePerMonthUSD.toFixed(2)}/month)`,
-              variant: 'primary'
-            }) :
-            m('p', this.ready ? 'No base product found.' : 'Loading subscription options...')
-        )
       ]),
       
       m(ProductList),

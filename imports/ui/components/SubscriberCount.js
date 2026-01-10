@@ -10,14 +10,21 @@ const SubscriberCount = {
   oninit(vnode) {
     this.count = null;
     this.ready = false;
+    this.handle = null;
+    
+    // Get productId from attrs, or null for overall count
+    const productId = vnode.attrs.productId || null;
     
     // Subscribe and track the count reactively
     this.computation = Tracker.autorun(() => {
-      const handle = Meteor.subscribe('activeSubscriberCount');
-      this.ready = handle.ready();
+      this.handle = Meteor.subscribe('activeSubscriberCount', productId);
+      this.ready = this.handle.ready();
       
       if (this.ready) {
-        const doc = SubscriberCounts.findOne('active');
+        // The publication publishes to 'subscriberCounts' collection
+        // with _id based on productId or 'all'
+        const countId = productId || 'all';
+        const doc = SubscriberCounts.findOne(countId);
         this.count = doc ? doc.count : 0;
       }
       
@@ -28,6 +35,9 @@ const SubscriberCount = {
   onremove(vnode) {
     if (this.computation) {
       this.computation.stop();
+    }
+    if (this.handle) {
+      this.handle.stop();
     }
   },
   

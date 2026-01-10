@@ -1,4 +1,5 @@
 import { Meteor } from 'meteor/meteor';
+import { check, Match } from 'meteor/check';
 import { Products } from '/lib/collections/products';
 import { Apps } from '/lib/collections/apps';
 
@@ -9,10 +10,6 @@ Meteor.publish('currentUser', function() {
     fields: {
       'emails': 1,
       'profile': 1,
-      'subscription.status': 1,
-      'subscription.planName': 1,
-      'subscription.validUntil': 1,
-      'products': 1,
       'createdAt': 1,
       'lemonSqueezy.customerId': 1,
       'lemonSqueezy.subscriptions': 1
@@ -20,33 +17,56 @@ Meteor.publish('currentUser', function() {
   });
 });
 
-Meteor.publish('activeSubscriberCount', async function() {
+Meteor.publish('activeSubscriberCount', async function(productId) {
+  check(productId, Match.OneOf(String, null, undefined));
+  
   const self = this;
   let count = 0;
   let initializing = true;
   
-  const query = {
-    'subscription.status': 'active',
-    'subscription.validUntil': { $gt: new Date() }
-  };
+  // Build query based on whether productId is provided
+  let query;
+  if (productId) {
+    query = {
+      'lemonSqueezy.subscriptions': {
+        $elemMatch: {
+          kokokinoProductId: productId,
+          status: 'active',
+          validUntil: { $gt: new Date() }
+        }
+      }
+    };
+  } else {
+    query = {
+      'lemonSqueezy.subscriptions': {
+        $elemMatch: {
+          status: 'active',
+          validUntil: { $gt: new Date() }
+        }
+      }
+    };
+  }
+  
+  // Use productId or 'all' as the document ID
+  const countId = productId || 'all';
   
   // Observe changes to the active subscribers cursor
   const handle = await Meteor.users.find(query, { fields: { _id: 1 } }).observeChangesAsync({
     added(id) {
       count++;
       if (!initializing) {
-        self.changed('subscriberCounts', 'active', { count });
+        self.changed('subscriberCounts', countId, { count });
       }
     },
     removed(id) {
       count--;
-      self.changed('subscriberCounts', 'active', { count });
+      self.changed('subscriberCounts', countId, { count });
     }
   });
   
   // Send initial count
   initializing = false;
-  self.added('subscriberCounts', 'active', { count });
+  self.added('subscriberCounts', countId, { count });
   self.ready();
   
   // Clean up observer on unsubscribe

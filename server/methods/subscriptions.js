@@ -1,42 +1,107 @@
 import { Meteor } from 'meteor/meteor';
-import { check } from 'meteor/check';
+import { check, Match } from 'meteor/check';
 import { isVerifiedUser } from '/imports/utils.js';
 import { Products } from '/lib/collections/products';
 import { Apps } from '/lib/collections/apps';
 
+/**
+ * Find a user's subscription for a specific product
+ */
+function findSubscriptionForProduct(user, productId) {
+  const subscriptions = user?.lemonSqueezy?.subscriptions || [];
+  return subscriptions.find(sub => sub.kokokinoProductId === productId);
+}
+
+/**
+ * Find any active subscription for a user
+ */
+function findAnyActiveSubscription(user) {
+  const subscriptions = user?.lemonSqueezy?.subscriptions || [];
+  const now = new Date();
+  return subscriptions.find(sub => 
+    sub.status === 'active' && 
+    sub.validUntil && 
+    new Date(sub.validUntil) > now
+  );
+}
+
 Meteor.methods({
-  // Get user's subscription status (client-safe)
-  async 'subscriptions.getStatus'() {
+  // Get user's subscription status for a specific product (or any active subscription)
+  async 'subscriptions.getStatus'(productId) {
+    check(productId, Match.OneOf(String, null, undefined));
+    
     if (!this.userId) {
       throw new Meteor.Error('not-authorized', 'You must be logged in');
     }
     
     const user = await Meteor.users.findOneAsync(this.userId);
-    const subscription = user?.lemonSqueezy?.subscriptions?.[0];
     const emailVerified = isVerifiedUser(user);
     
-    // Get validUntil from user.subscription.validUntil (set by webhooks)
-    // If not found there, try to get it from the subscription object
-    const validUntil = user?.subscription?.validUntil || subscription?.validUntil;
-    const validUntilDate = validUntil ? new Date(validUntil) : null;
+    // If productId is provided, find subscription for that product
+    // Otherwise, find any active subscription
+    let subscription;
+    if (productId) {
+      subscription = findSubscriptionForProduct(user, productId);
+    } else {
+      subscription = findAnyActiveSubscription(user);
+    }
+    
+    if (!subscription) {
+      return {
+        status: 'inactive',
+        planName: 'No subscription',
+        validUntil: null,
+        emailVerified: emailVerified,
+        manageUrl: null,
+        isValid: false,
+        renewsAt: null,
+        endsAt: null
+      };
+    }
     
     // Check if subscription is still valid based on validUntil date
     const now = new Date();
+    const validUntilDate = subscription.validUntil ? new Date(subscription.validUntil) : null;
     const isSubscriptionValid = validUntilDate && validUntilDate > now;
     
     return {
-      status: subscription?.status || 'inactive',
-      planName: subscription?.productName || 'No subscription',
-      validUntil: validUntil,
+      status: subscription.status || 'inactive',
+      planName: subscription.productName || 'No subscription',
+      validUntil: subscription.validUntil,
       emailVerified: emailVerified,
-      // Use the customer portal URL from Lemon Squeezy webhook data
-      manageUrl: subscription?.customerPortalUrl || null,
-      // Add a flag to indicate if subscription is currently valid
+      manageUrl: subscription.customerPortalUrl || null,
       isValid: isSubscriptionValid,
-      // Include additional fields for debugging
-      renewsAt: subscription?.renewsAt,
-      endsAt: subscription?.endsAt
+      renewsAt: subscription.renewsAt,
+      endsAt: subscription.endsAt,
+      kokokinoProductId: subscription.kokokinoProductId
     };
+  },
+  
+  // Get all subscriptions for the current user
+  async 'subscriptions.getAll'() {
+    if (!this.userId) {
+      throw new Meteor.Error('not-authorized', 'You must be logged in');
+    }
+    
+    const user = await Meteor.users.findOneAsync(this.userId);
+    const subscriptions = user?.lemonSqueezy?.subscriptions || [];
+    const now = new Date();
+    
+    return subscriptions.map(sub => {
+      const validUntilDate = sub.validUntil ? new Date(sub.validUntil) : null;
+      const isValid = validUntilDate && validUntilDate > now;
+      
+      return {
+        status: sub.status,
+        planName: sub.productName,
+        validUntil: sub.validUntil,
+        manageUrl: sub.customerPortalUrl,
+        isValid: isValid,
+        renewsAt: sub.renewsAt,
+        endsAt: sub.endsAt,
+        kokokinoProductId: sub.kokokinoProductId
+      };
+    });
   },
   
   // Create checkout session (redirects to Lemon Squeezy)
@@ -63,6 +128,15 @@ Meteor.methods({
       throw new Meteor.Error('email-not-verified', 'Please verify your email address before subscribing');
     }
     
+    // Check if user already has an active subscription for this product
+    const existingSubscription = findSubscriptionForProduct(user, productId);
+    if (existingSubscription) {
+      const validUntil = existingSubscription.validUntil ? new Date(existingSubscription.validUntil) : null;
+      if (validUntil && validUntil > new Date()) {
+        throw new Meteor.Error('already-subscribed', 'You already have an active subscription for this product');
+      }
+    }
+    
     // Look up product in our Products collection
     const product = await Products.findOneAsync(productId);
     if (!product) {
@@ -73,7 +147,8 @@ Meteor.methods({
     
     const storeName = Meteor.settings.private.lemonSqueezy?.storeName || 'kokokino';
     // Lemon Squeezy custom data format: checkout[custom][key]=value
-    const checkoutUrl = `https://${storeName}.lemonsqueezy.com/checkout/buy/${product.lemonSqueezyBuyLinkId}?checkout[email]=${encodeURIComponent(email)}&checkout[custom][user_id]=${this.userId}&checkout[custom][email]=${encodeURIComponent(email)}&checkout[custom][kokokinoProductId]=${encodeURIComponent(productId)}`;
+    // Note: using snake_case for custom data keys as that's what we extract in webhooks
+    const checkoutUrl = `https://${storeName}.lemonsqueezy.com/checkout/buy/${product.lemonSqueezyBuyLinkId}?checkout[email]=${encodeURIComponent(email)}&checkout[custom][user_id]=${this.userId}&checkout[custom][email]=${encodeURIComponent(email)}&checkout[custom][kokokino_product_id]=${encodeURIComponent(productId)}`;
     
     return {
       checkoutUrl: checkoutUrl,
@@ -81,22 +156,24 @@ Meteor.methods({
     };
   },
 
-  'products.getAll': function() {
-    return Products.find({
+  'products.getAll': async function() {
+    return await Products.find({
       isApproved: true,
       isActive: true
     }, {
       sort: { sortOrder: 1 }
-    }).fetch();
+    }).fetchAsync();
   },
-  'products.getApps': function(productId) {
+  
+  'products.getApps': async function(productId) {
     check(productId, String);
-    return Apps.find({
-      _id: productId,
+    return await Apps.find({
+      productId: productId,
       isApproved: true,
       isActive: true
-    }).fetch();
+    }).fetchAsync();
   },
+  
   'products.getById': async function(productId) {
     check(productId, String);
     return await Products.findOneAsync({
@@ -104,5 +181,38 @@ Meteor.methods({
       isApproved: true,
       isActive: true
     });
+  },
+  
+  // Get user's subscribed products with full product details
+  'subscriptions.getUserProducts': async function() {
+    if (!this.userId) {
+      throw new Meteor.Error('not-authorized', 'You must be logged in');
+    }
+    
+    const user = await Meteor.users.findOneAsync(this.userId);
+    const subscriptions = user?.lemonSqueezy?.subscriptions || [];
+    const now = new Date();
+    
+    // Get product details for each subscription
+    const results = [];
+    for (const sub of subscriptions) {
+      const product = await Products.findOneAsync(sub.kokokinoProductId);
+      const validUntilDate = sub.validUntil ? new Date(sub.validUntil) : null;
+      const isValid = validUntilDate && validUntilDate > now;
+      
+      results.push({
+        subscription: {
+          status: sub.status,
+          validUntil: sub.validUntil,
+          isValid: isValid,
+          renewsAt: sub.renewsAt,
+          endsAt: sub.endsAt,
+          customerPortalUrl: sub.customerPortalUrl
+        },
+        product: product
+      });
+    }
+    
+    return results;
   }
 });

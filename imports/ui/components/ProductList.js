@@ -3,12 +3,13 @@ import { Tracker } from 'meteor/tracker';
 import { Meteor } from 'meteor/meteor';
 import { Products } from '/lib/collections/products';
 import SubscriptionButton from './SubscriptionButton';
+import SubscriberCount from './SubscriberCount';
 
 const ProductList = {
   oninit() {
     this.ready = false;
     this.products = [];
-    // We rely on global subscription from main.js
+    
     this.autorun = Tracker.autorun(() => {
       this.ready = Meteor.subscribe('products').ready();
       if (this.ready) {
@@ -34,25 +35,23 @@ const ProductList = {
       return m('p', 'Loading products...');
     }
     
-    console.log('ProductList: products count:', this.products.length);
-    console.log('ProductList: products:', this.products);
-    
     if (this.products.length === 0) {
       return m('p', 'No products available.');
     }
     
     return this.products.map(product => 
-        m('article', { key: product._id }, [
-          m('h2', product.name),
-          m('p', product.description),
-          m('p', `Price: $${product.pricePerMonthUSD.toFixed(2)}/month`),
-          m(SubscriptionButton, {
-            productId: product._id,
-            label: 'Subscribe',
-            variant: 'primary'
-          })
-        ])
-      );
+      m('article', { key: product._id }, [
+        m('h2', product.name),
+        m('p', product.description),
+        m('p', `Price: $${product.pricePerMonthUSD.toFixed(2)}/month`),
+        m('p', ['Currently: ', m(SubscriberCount, { productId: product._id })]),
+        m(SubscriptionButton, {
+          productId: product._id,
+          label: 'Subscribe',
+          variant: 'primary'
+        })
+      ])
+    );
   }
 };
 

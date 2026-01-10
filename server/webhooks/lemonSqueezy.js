@@ -57,51 +57,53 @@ async function handleWebhookEvent(event, data) {
   const { attributes } = data.data;
 
   // Lemon Squeezy puts custom_data in meta, not attributes
-  const userId = data.meta?.custom_data?.user_id;
+  const customData = data.meta?.custom_data || {};
+  const userId = customData.user_id;
+  const kokokinoProductId = customData.kokokino_product_id;
   
-  const email = attributes?.user_email;
-  
-  let targetUserId = userId;
-  
-  if (!targetUserId) {
-    console.error('No user found for webhook:', event);
+  if (!userId) {
+    console.error('No user_id found in webhook custom_data:', event);
     return;
+  }
+  
+  if (!kokokinoProductId) {
+    console.warn('No kokokino_product_id in webhook custom_data:', event, '- subscription may not be linked to a product');
   }
   
   switch (event) {
     case 'subscription_created':
-      await handleSubscriptionCreated(targetUserId, data);
+      await handleSubscriptionCreated(userId, data, kokokinoProductId);
       break;
     case 'subscription_updated':
-      await handleSubscriptionUpdated(targetUserId, data);
+      await handleSubscriptionUpdated(userId, data, kokokinoProductId);
       break;
     case 'subscription_paused':
-      await handleSubscriptionPaused(targetUserId, data);
+      await handleSubscriptionPaused(userId, data, kokokinoProductId);
       break;
     case 'subscription_unpaused':
     case 'subscription_resumed':
-      await handleSubscriptionResumed(targetUserId, data);
+      await handleSubscriptionResumed(userId, data, kokokinoProductId);
       break;
     case 'subscription_payment_failed':
-      await handleSubscriptionPaymentFailed(targetUserId, data);
+      await handleSubscriptionPaymentFailed(userId, data, kokokinoProductId);
       break;
     case 'subscription_payment_success':
     case 'subscription_payment_recovered':
-      await handleSubscriptionPaymentSuccess(targetUserId, data);
+      await handleSubscriptionPaymentSuccess(userId, data, kokokinoProductId);
       break;
     case 'subscription_payment_refunded':
       // Refunds are informational - log but don't change subscription status
-      console.log(`Payment refunded for user ${targetUserId}, subscription ${data.data.id}`);
-      await updateLastWebhookReceived(targetUserId);
+      console.log(`Payment refunded for user ${userId}, subscription ${data.data.id}`);
+      await updateLastWebhookReceived(userId);
       break;
     case 'subscription_plan_changed':
-      await handleSubscriptionPlanChanged(targetUserId, data);
+      await handleSubscriptionPlanChanged(userId, data, kokokinoProductId);
       break;
     case 'subscription_cancelled':
-      await handleSubscriptionCancelled(targetUserId, data);
+      await handleSubscriptionCancelled(userId, data, kokokinoProductId);
       break;
     case 'subscription_expired':
-      await handleSubscriptionExpired(targetUserId, data);
+      await handleSubscriptionExpired(userId, data, kokokinoProductId);
       break;
     default:
       console.log(`Unhandled webhook event: ${event}`);
@@ -121,8 +123,9 @@ async function updateLastWebhookReceived(userId) {
 
 /**
  * Build subscription data object from webhook attributes
+ * New structure stores subscriptions with kokokinoProductId as the key identifier
  */
-function buildSubscriptionData(data) {
+function buildSubscriptionData(data, kokokinoProductId) {
   const { attributes } = data.data;
   const subscriptionId = data.data.id;
   
@@ -131,13 +134,14 @@ function buildSubscriptionData(data) {
   
   return {
     subscriptionId: subscriptionId,
-    kokokinoProductId: attributes.kokokinoProductId,
+    kokokinoProductId: kokokinoProductId,
+    lemonSqueezyProductId: attributes.product_id,
+    lemonSqueezyVariantId: attributes.variant_id,
     customerId: attributes.customer_id,
-    productId: attributes.product_id,
-    variantId: attributes.variant_id,
     productName: attributes.product_name,
     variantName: attributes.variant_name,
     status: attributes.status,
+    validUntil: validUntil,
     renewsAt: attributes.renews_at ? new Date(attributes.renews_at) : null,
     endsAt: attributes.ends_at ? new Date(attributes.ends_at) : null,
     trialEndsAt: attributes.trial_ends_at ? new Date(attributes.trial_ends_at) : null,
@@ -148,8 +152,6 @@ function buildSubscriptionData(data) {
     } : null,
     // Customer portal URL for managing the subscription
     customerPortalUrl: attributes.urls?.customer_portal || null,
-    // Store validUntil in the subscription data for easy access
-    validUntil: validUntil,
     createdAt: attributes.created_at ? new Date(attributes.created_at) : new Date(),
     updatedAt: attributes.updated_at ? new Date(attributes.updated_at) : new Date()
   };
@@ -196,18 +198,24 @@ function determineValidUntil(attributes) {
 
 /**
  * Update or insert subscription in user's subscriptions array
+ * Subscriptions are keyed by kokokinoProductId - one subscription per product per user
  */
-async function upsertSubscription(userId, subscriptionData, topLevelFields) {
-  const subscriptionId = subscriptionData.subscriptionId;
+async function upsertSubscription(userId, subscriptionData) {
+  const kokokinoProductId = subscriptionData.kokokinoProductId;
   
-  // First, try to update existing subscription
+  if (!kokokinoProductId) {
+    console.error('Cannot upsert subscription without kokokinoProductId');
+    return;
+  }
+  
+  // First, try to update existing subscription for this product
   const updateResult = await Meteor.users.updateAsync(
-    { _id: userId, 'lemonSqueezy.subscriptions.subscriptionId': subscriptionId },
+    { _id: userId, 'lemonSqueezy.subscriptions.kokokinoProductId': kokokinoProductId },
     {
       $set: {
+        'lemonSqueezy.customerId': subscriptionData.customerId,
         'lemonSqueezy.lastWebhookReceived': new Date(),
-        'lemonSqueezy.subscriptions.$': subscriptionData,
-        ...topLevelFields
+        'lemonSqueezy.subscriptions.$': subscriptionData
       }
     }
   );
@@ -219,8 +227,7 @@ async function upsertSubscription(userId, subscriptionData, topLevelFields) {
       {
         $set: {
           'lemonSqueezy.customerId': subscriptionData.customerId,
-          'lemonSqueezy.lastWebhookReceived': new Date(),
-          ...topLevelFields
+          'lemonSqueezy.lastWebhookReceived': new Date()
         },
         $push: {
           'lemonSqueezy.subscriptions': subscriptionData
@@ -231,114 +238,92 @@ async function upsertSubscription(userId, subscriptionData, topLevelFields) {
 }
 
 /**
- * Handle subscription_created event
- * New subscription - typically status is "active" or "on_trial"
+ * Remove a subscription from user's subscriptions array by kokokinoProductId
  */
-async function handleSubscriptionCreated(userId, data) {
-  const { attributes } = data.data;
-  const subscriptionData = buildSubscriptionData(data);
+async function removeSubscription(userId, kokokinoProductId) {
+  if (!kokokinoProductId) {
+    console.error('Cannot remove subscription without kokokinoProductId');
+    return;
+  }
   
   await Meteor.users.updateAsync(userId, {
     $set: {
-      'lemonSqueezy.customerId': subscriptionData.customerId,
-      'lemonSqueezy.subscriptions': [subscriptionData],
-      'lemonSqueezy.lastWebhookReceived': new Date(),
-      'subscription.status': attributes.status,
-      'subscription.planName': subscriptionData.productName,
-      'subscription.validUntil': subscriptionData.validUntil
+      'lemonSqueezy.lastWebhookReceived': new Date()
+    },
+    $pull: {
+      'lemonSqueezy.subscriptions': { kokokinoProductId: kokokinoProductId }
     }
   });
+}
+
+/**
+ * Handle subscription_created event
+ * New subscription - typically status is "active" or "on_trial"
+ */
+async function handleSubscriptionCreated(userId, data, kokokinoProductId) {
+  const subscriptionData = buildSubscriptionData(data, kokokinoProductId);
+  await upsertSubscription(userId, subscriptionData);
+  console.log(`Subscription created for user ${userId}, product ${kokokinoProductId}, status: ${subscriptionData.status}`);
 }
 
 /**
  * Handle subscription_updated event
  * General update - could be any change to the subscription
  */
-async function handleSubscriptionUpdated(userId, data) {
-  const { attributes } = data.data;
-  const subscriptionData = buildSubscriptionData(data);
-  
-  await upsertSubscription(userId, subscriptionData, {
-    'subscription.status': attributes.status,
-    'subscription.planName': subscriptionData.productName,
-    'subscription.validUntil': subscriptionData.validUntil
-  });
+async function handleSubscriptionUpdated(userId, data, kokokinoProductId) {
+  const subscriptionData = buildSubscriptionData(data, kokokinoProductId);
+  await upsertSubscription(userId, subscriptionData);
+  console.log(`Subscription updated for user ${userId}, product ${kokokinoProductId}, status: ${subscriptionData.status}`);
 }
 
 /**
  * Handle subscription_paused event
  * Subscription is paused - renews_at is null, pause.resumes_at may have a date
  */
-async function handleSubscriptionPaused(userId, data) {
-  const { attributes } = data.data;
-  const subscriptionData = buildSubscriptionData(data);
-  
-  await upsertSubscription(userId, subscriptionData, {
-    'subscription.status': 'paused',
-    'subscription.planName': subscriptionData.productName,
-    'subscription.validUntil': subscriptionData.validUntil
-  });
+async function handleSubscriptionPaused(userId, data, kokokinoProductId) {
+  const subscriptionData = buildSubscriptionData(data, kokokinoProductId);
+  await upsertSubscription(userId, subscriptionData);
+  console.log(`Subscription paused for user ${userId}, product ${kokokinoProductId}`);
 }
 
 /**
  * Handle subscription_unpaused and subscription_resumed events
  * Subscription is active again - renews_at should have a value
  */
-async function handleSubscriptionResumed(userId, data) {
-  const { attributes } = data.data;
-  const subscriptionData = buildSubscriptionData(data);
-  
-  await upsertSubscription(userId, subscriptionData, {
-    'subscription.status': 'active',
-    'subscription.planName': subscriptionData.productName,
-    'subscription.validUntil': subscriptionData.validUntil
-  });
+async function handleSubscriptionResumed(userId, data, kokokinoProductId) {
+  const subscriptionData = buildSubscriptionData(data, kokokinoProductId);
+  await upsertSubscription(userId, subscriptionData);
+  console.log(`Subscription resumed for user ${userId}, product ${kokokinoProductId}`);
 }
 
 /**
  * Handle subscription_payment_failed event
  * Payment failed - status is typically "past_due" or "unpaid"
  */
-async function handleSubscriptionPaymentFailed(userId, data) {
-  const { attributes } = data.data;
-  const subscriptionData = buildSubscriptionData(data);
-  
-  // Use the status from Lemon Squeezy (past_due, unpaid, etc.)
-  await upsertSubscription(userId, subscriptionData, {
-    'subscription.status': attributes.status,
-    'subscription.planName': subscriptionData.productName,
-    'subscription.validUntil': subscriptionData.validUntil
-  });
+async function handleSubscriptionPaymentFailed(userId, data, kokokinoProductId) {
+  const subscriptionData = buildSubscriptionData(data, kokokinoProductId);
+  await upsertSubscription(userId, subscriptionData);
+  console.log(`Subscription payment failed for user ${userId}, product ${kokokinoProductId}, status: ${subscriptionData.status}`);
 }
 
 /**
  * Handle subscription_payment_success and subscription_payment_recovered events
  * Payment succeeded - subscription should be active
  */
-async function handleSubscriptionPaymentSuccess(userId, data) {
-  const { attributes } = data.data;
-  const subscriptionData = buildSubscriptionData(data);
-  
-  await upsertSubscription(userId, subscriptionData, {
-    'subscription.status': attributes.status, // Should be 'active'
-    'subscription.planName': subscriptionData.productName,
-    'subscription.validUntil': subscriptionData.validUntil
-  });
+async function handleSubscriptionPaymentSuccess(userId, data, kokokinoProductId) {
+  const subscriptionData = buildSubscriptionData(data, kokokinoProductId);
+  await upsertSubscription(userId, subscriptionData);
+  console.log(`Subscription payment success for user ${userId}, product ${kokokinoProductId}`);
 }
 
 /**
  * Handle subscription_plan_changed event
  * Plan changed - product_id, product_name, variant_id may be different
  */
-async function handleSubscriptionPlanChanged(userId, data) {
-  const { attributes } = data.data;
-  const subscriptionData = buildSubscriptionData(data);
-  
-  await upsertSubscription(userId, subscriptionData, {
-    'subscription.status': attributes.status,
-    'subscription.planName': subscriptionData.productName,
-    'subscription.validUntil': subscriptionData.validUntil
-  });
+async function handleSubscriptionPlanChanged(userId, data, kokokinoProductId) {
+  const subscriptionData = buildSubscriptionData(data, kokokinoProductId);
+  await upsertSubscription(userId, subscriptionData);
+  console.log(`Subscription plan changed for user ${userId}, product ${kokokinoProductId}`);
 }
 
 /**
@@ -346,37 +331,18 @@ async function handleSubscriptionPlanChanged(userId, data) {
  * Subscription cancelled - ends_at indicates when access ends
  * User retains access until ends_at (end of current billing period)
  */
-async function handleSubscriptionCancelled(userId, data) {
-  const { attributes } = data.data;
-  const subscriptionData = buildSubscriptionData(data);
-  
-  // Update the subscription in the array (don't remove it yet - user still has access)
-  await upsertSubscription(userId, subscriptionData, {
-    'subscription.status': 'cancelled',
-    'subscription.planName': subscriptionData.productName,
-    'subscription.validUntil': subscriptionData.validUntil
-  });
+async function handleSubscriptionCancelled(userId, data, kokokinoProductId) {
+  const subscriptionData = buildSubscriptionData(data, kokokinoProductId);
+  await upsertSubscription(userId, subscriptionData);
+  console.log(`Subscription cancelled for user ${userId}, product ${kokokinoProductId}, ends at: ${subscriptionData.endsAt}`);
 }
 
 /**
  * Handle subscription_expired event
  * Subscription has expired - access should be revoked
  */
-async function handleSubscriptionExpired(userId, data) {
-  const { attributes } = data.data;
-  const subscriptionData = buildSubscriptionData(data);
-  const subscriptionId = data.data.id;
-  
+async function handleSubscriptionExpired(userId, data, kokokinoProductId) {
   // Remove the subscription from the array since it's expired
-  await Meteor.users.updateAsync(userId, {
-    $set: {
-      'subscription.status': 'expired',
-      'subscription.planName': subscriptionData.productName,
-      'subscription.validUntil': subscriptionData.validUntil,
-      'lemonSqueezy.lastWebhookReceived': new Date()
-    },
-    $pull: {
-      'lemonSqueezy.subscriptions': { subscriptionId: subscriptionId }
-    }
-  });
+  await removeSubscription(userId, kokokinoProductId);
+  console.log(`Subscription expired and removed for user ${userId}, product ${kokokinoProductId}`);
 }

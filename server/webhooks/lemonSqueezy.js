@@ -131,6 +131,7 @@ function buildSubscriptionData(data) {
   
   return {
     subscriptionId: subscriptionId,
+    kokokinoProductId: attributes.kokokinoProductId,
     customerId: attributes.customer_id,
     productId: attributes.product_id,
     variantId: attributes.variant_id,

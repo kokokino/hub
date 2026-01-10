@@ -1,13 +1,64 @@
 import { Meteor } from 'meteor/meteor';
 import { Accounts } from 'meteor/accounts-base';                                                                                                            
 import { Email } from 'meteor/email';                                                                                                                       
+import { Migrations } from 'meteor/quave:migrations';
+import { Products } from '/lib/collections/products';
+import { Apps } from '/lib/collections/apps';
+import { ProductOwners } from '/lib/collections/productOwners';
+import { AppOwners } from '/lib/collections/appOwners';
 import '../lib/collections/users.js';
 import './methods/subscriptions.js';
 import './webhooks/lemonSqueezy.js';
 import './publications.js';
+import './migrations/0_steps.js';
 import { isVerifiedUser } from '/imports/utils.js';
 
-Meteor.startup(() => {
+// Configure migrations
+Migrations.config({
+  // Log job run details to console
+  log: true,
+  // Use a custom logger function (defaults to Meteor's logging package)
+  logger: null,
+  // Enable/disable logging "Not migrating, already at version {number}"
+  logIfLatest: true,
+  // migrations collection name to use in the database
+  collectionName: "migrations"
+});
+
+Meteor.startup(async () => {
+  console.log('=== MIGRATIONS STARTUP ===');
+  console.log('Checking for pending migrations...');
+  
+  try {
+    // Check current version
+    const currentVersion = await Migrations.getVersion();
+    console.log('Current migration version in DB:', currentVersion);
+    
+    // List all registered migrations for debugging
+    const migrations = Migrations._migrations || {};
+    console.log(`Registered migrations: ${Object.keys(migrations).length}`);
+    Object.keys(migrations).forEach(version => {
+      console.log(`  Version ${version}: ${migrations[version].name}`);
+    });
+    
+    // Try to migrate to latest regardless
+    console.log('Attempting to migrate to latest...');
+    try {
+      await Migrations.migrateTo('latest');
+      const newVersion = await Migrations.getVersion();
+      console.log(`✓ Migrations completed successfully. Now at version ${newVersion}`);
+    } catch (error) {
+      console.error('Migration failed:', error);
+    }
+    
+    // Debug: Check if products exist
+    const productCount = await Products.find().countAsync();
+    console.log(`Products in database: ${productCount}`);
+  } catch (error) {
+    console.error('Error running migrations:', error);
+    console.error('Error stack:', error.stack);
+  }
+
   // Debug: Check if MAIL_URL is set
   const mailUrl = Meteor.settings?.private?.MAIL_URL;
   if (mailUrl && !process.env.MAIL_URL) {

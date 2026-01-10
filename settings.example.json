@@ -2,7 +2,6 @@
   "public": {
     "appName": "Kokokino Hub", 
     "lemonSqueezy": {
-      "baseMonthlyProductID": "your-product-id", 
     }
   },
   "private": {

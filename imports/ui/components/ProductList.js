@@ -1,0 +1,62 @@
+import m from 'mithril';
+import { Tracker } from 'meteor/tracker';
+import { Meteor } from 'meteor/meteor';
+import { Products } from '/lib/collections/products';
+import SubscriptionButton from './SubscriptionButton';
+
+const ProductList = {
+  oninit() {
+    this.ready = false;
+    this.products = [];
+    // We rely on global subscription from main.js
+    this.autorun = Tracker.autorun(() => {
+      this.ready = Meteor.subscribe('products').ready();
+      if (this.ready) {
+        this.products = Products.find({
+          isApproved: true,
+          isActive: true
+        }, {
+          sort: { sortOrder: 1 }
+        }).fetch();
+      }
+      m.redraw();
+    });
+  },
+  
+  onremove() {
+    if (this.autorun) {
+      this.autorun.stop();
+    }
+  },
+  
+  view() {
+    if (!this.ready) {
+      return m('p', 'Loading products...');
+    }
+    
+    console.log('ProductList: products count:', this.products.length);
+    console.log('ProductList: products:', this.products);
+    
+    if (this.products.length === 0) {
+      return m('p', 'No products available.');
+    }
+    
+    return m('div.product-list', [
+      m('h2', 'Available Products'),
+      this.products.map(product => 
+        m('div.product-card', { key: product._id }, [
+          m('h3', product.name),
+          m('p', product.description),
+          m('p', `Price: $${product.pricePerMonthUSD.toFixed(2)}/month`),
+          m(SubscriptionButton, {
+            productId: product._id,
+            label: 'Subscribe',
+            variant: 'primary'
+          })
+        ])
+      )
+    ]);
+  }
+};
+
+export default ProductList;

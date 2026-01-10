@@ -1,12 +1,18 @@
 import m from 'mithril';
 import { Tracker } from 'meteor/tracker';
+import { Meteor } from 'meteor/meteor';
 import { isVerifiedUser } from '/imports/utils.js';
+import { Products } from '/lib/collections/products';
 
 const SubscriptionButton = {
   oninit(vnode) {
     this.loading = false;
     this.subscription = null;
     this.userId = null; // Track user ID instead of full user object
+    this.product = null;
+    
+    // Subscribe to products publication
+    this.productsHandle = Meteor.subscribe('products');
     
     // Set up Tracker to reactively update when user changes
     this.computation = Tracker.autorun(() => {
@@ -34,6 +40,17 @@ const SubscriptionButton = {
         }
         m.redraw();
       }
+      
+      // Fetch product details
+      const { productId } = vnode.attrs;
+      if (productId && this.productsHandle.ready()) {
+        const product = Products.findOne(productId);
+        if (product) {
+          this.product = product;
+        } else {
+          this.product = null;
+        }
+      }
     });
   },
   
@@ -42,10 +59,13 @@ const SubscriptionButton = {
     if (this.computation) {
       this.computation.stop();
     }
+    if (this.productsHandle) {
+      this.productsHandle.stop();
+    }
   },
   
   view(vnode) {
-    const { productId = 'base_monthly', label = 'Subscribe', variant = 'primary' } = vnode.attrs;
+    const { productId, label = 'Subscribe', variant = 'primary' } = vnode.attrs;
     const user = Meteor.user(); // Get reactive user directly
     
     // If user is not logged in, show login prompt
@@ -117,10 +137,12 @@ const SubscriptionButton = {
     }
     
     // No valid subscription - show subscribe button (only if email is verified)
+    const buttonLabel = this.product ? `Subscribe to ${this.product.name}` : label;
     return m('button', {
       class: `button button-${variant}`,
-      disabled: this.loading,
+      disabled: this.loading || !this.product,
       onclick: () => {
+        if (!productId) return;
         this.loading = true;
         m.redraw();
         
@@ -135,7 +157,7 @@ const SubscriptionButton = {
           }
         });
       }
-    }, this.loading ? 'Loading...' : label);
+    }, this.loading ? 'Loading...' : buttonLabel);
   }
 };
 

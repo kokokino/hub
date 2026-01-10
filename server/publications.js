@@ -1,4 +1,6 @@
 import { Meteor } from 'meteor/meteor';
+import { Products } from '/lib/collections/products';
+import { Apps } from '/lib/collections/apps';
 
 Meteor.publish('currentUser', function() {
   if (!this.userId) return this.ready();
@@ -10,6 +12,7 @@ Meteor.publish('currentUser', function() {
       'subscription.status': 1,
       'subscription.planName': 1,
       'subscription.validUntil': 1,
+      'products': 1,
       'createdAt': 1,
       'lemonSqueezy.customerId': 1,
       'lemonSqueezy.subscriptions': 1
@@ -50,4 +53,46 @@ Meteor.publish('activeSubscriberCount', async function() {
   self.onStop(() => {
     handle.stop();
   });
+});
+
+// Add publications for products and apps
+Meteor.publish('products', function() {
+  console.log('Products publication called for user:', this.userId);
+  const cursor = Products.find({
+    isApproved: true,
+    isActive: true
+  }, {
+    sort: { sortOrder: 1 },
+    fields: {
+      name: 1,
+      description: 1,
+      sortOrder: 1,
+      pricePerMonthUSD: 1,
+      lemonSqueezyBuyLinkId: 1,
+      isRequired: 1,
+      isActive: 1,
+      isApproved: 1
+    }
+  });
+  
+  return cursor;
+});
+
+Meteor.publish('apps', function() {
+  console.log('Apps publication called for user:', this.userId);
+  const cursor = Apps.find({
+    isApproved: true,
+    isActive: true
+  }, {
+    fields: {
+      name: 1,
+      description: 1,
+      productId: 1,
+      ageRating: 1,
+      isActive: 1,
+      isApproved: 1
+    }
+  });
+  
+  return cursor;
 });

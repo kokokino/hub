@@ -50,5 +50,10 @@ Each app is provisioned separately, allowing independent development and deploym
 We welcome contributions from developers, designers, and game creators of all skill levels.  
 Check the individual app repositories for contribution guidelines and issue trackers.
 
+## Meteor style guide
+1. Many older Meteor package won't work since we are focused on Meteor v3
+2. Must use async/await pattern with many method calls since we are no longer using fibers for asynchronous calls
+3. Packages `autopublish` and `insecure` are not installed. They are for rapid prototyping, not for deployed code. 
+
 ---
-*Last updated: 2025‑12‑16*
+*Last updated: 2026‑01‑08*

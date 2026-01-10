@@ -3,6 +3,9 @@ import { Blaze } from 'meteor/blaze';
 import { Template } from 'meteor/templating';
 import { Tracker } from 'meteor/tracker';
 import { Accounts } from 'meteor/accounts-base';
+import { Meteor } from 'meteor/meteor';
+import { Products } from '/lib/collections/products';
+import { Apps } from '/lib/collections/apps';
 import './main.html';
 
 // Import Pico CSS directly from node_modules
@@ -38,8 +41,36 @@ const verificationStore = {
   }
 };
 
-// Subscribe to current user data including subscription info
-Meteor.subscribe('currentUser');
+// Global subscriptions with logging
+console.log('Setting up global subscriptions');
+const currentUserHandle = Meteor.subscribe('currentUser');
+const productsHandle = Meteor.subscribe('products');
+const appsHandle = Meteor.subscribe('apps');
+
+// Track subscription status
+Tracker.autorun(() => {
+  const currentUserReady = currentUserHandle.ready();
+  const productsReady = productsHandle.ready();
+  const appsReady = appsHandle.ready();
+  
+  console.log('Subscription status - currentUser:', currentUserReady, 'products:', productsReady, 'apps:', appsReady);
+  
+  if (productsReady) {
+    const productCount = Products.find().count();
+    console.log(`Client received ${productCount} products`);
+    Products.find().forEach(product => {
+      console.log('Product:', product.name, product._id);
+    });
+  }
+  
+  if (appsReady) {
+    const appCount = Apps.find().count();
+    console.log(`Client received ${appCount} apps`);
+    Apps.find().forEach(app => {
+      console.log('App:', app.name, app._id);
+    });
+  }
+});
 
 // Set up Tracker to monitor verification status
 Tracker.autorun(() => {

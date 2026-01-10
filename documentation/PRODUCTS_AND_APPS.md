@@ -16,8 +16,7 @@ We're transitioning from a single-subscription model to a multi-product system w
   name: String,          // Display name (e.g., "Base Monthly")                                                                                             
   description: String,    // Detailed description                                                                                                           
   sortOrder: Number,     // Display order (lower = first)                                                                                                   
-  checkoutUUID: String,  // Lemon Squeezy checkout UUID (optional initially)                                                                                
-  productID: Number,     // Lemon Squeezy product ID (optional initially)                                                                                   
+  lemonSqueezyBuyLinkId: Number,     // (optional initially)                                                                                   
   pricePerMonthUSD: Number,  // Decimal price (e.g., 2.00)                                                                                                  
   gitHubURL: String,     // Optional GitHub repo link                                                                                                       
   paymentInstructions: String, // Payment details for owners                                                                                                
@@ -100,31 +99,25 @@ user.subscription: {
 }                                                                                                                                                           
                                                                                                                                                             
 
-New Structure (Multiple Products):                                                                                                                          
+New Structure (Multiple Product Subscriptions):                                                                                                                          
 
                                                                                                                                                             
 user.lemonSqueezy: {                                                                                                                                        
   customerId: String,                                                                                                                                       
   subscriptions: [{                                                                                                                                         
-    subscriptionId: String,                                                                                                                                 
-    productId: String,      // Lemon Squeezy product ID                                                                                                     
-    checkoutUUID: String,   // Lemon Squeezy checkout UUID for link to purchase
+    subscriptionId: String,
+    kokokinoProductId: String, // References our Products._id                                                                                                  
+    lemonSqueezyBuyLinkId: String,
     status: String,                                                                                                                                         
+    validUntil: Date,                                                                                                                                         
     productName: String,                                                                                                                                    
     renewsAt: Date,                                                                                                                                         
     endsAt: Date,                                                                                                                                           
+    createdAt: Date,                                                                                                                                          
+    updatedAt: Date                                                                                                                                           
     // ... other Lemon Squeezy fields                                                                                                                       
   }]                                                                                                                                                        
 }                                                                                                                                                           
-user.products: [{                                                                                                                                           
-  productId: String,        // References our Products._id                                                                                                  
-  checkoutUUID: String,     // For lookup                                                                                                                   
-  status: String,           // 'active', 'cancelled', 'expired'                                                                                             
-  validUntil: Date,                                                                                                                                         
-  lemonSqueezyId: String,   // Links to lemonSqueezy.subscriptions                                                                                          
-  createdAt: Date,                                                                                                                                          
-  updatedAt: Date                                                                                                                                           
-}]                                                                                                                                                          
                                                                                                                                                             
 
 
@@ -154,6 +147,7 @@ Migrations.add({
       description: 'Access to fundamental apps and games including Backlog Beacon',                                                                         
       sortOrder: 0,                                                                                                                                         
       pricePerMonthUSD: 2.00,                                                                                                                               
+      lemonSqueezyBuyLinkId: '53df2db1-9867-460f-86b4-fc317238b88a', 
       isApproved: true,                                                                                                                                     
       isRequired: true,                                                                                                                                       
       isActive: true,                                                                                                                                         
@@ -174,28 +168,11 @@ Migrations.add({
       updatedAt: new Date(),                                                                                                                                
       createdBy: 'system'                                                                                                                                   
     });                                                                                                                                                     
-                                                                                                                                                            
-    // Migrate existing users                                                                                                                               
-    Meteor.users.find({ 'subscription.status': 'active' }).forEach(user => {                                                                                
-      Meteor.users.update(user._id, {                                                                                                                       
-        $set: {                                                                                                                                             
-          'products': [{                                                                                                                                    
-            productId: baseProductId,                                                                                                                       
-            status: user.subscription.status,                                                                                                               
-            validUntil: user.subscription.validUntil,                                                                                                       
-            lemonSqueezyId: user.lemonSqueezy?.subscriptions?.[0]?.subscriptionId,                                                                          
-            createdAt: new Date(),                                                                                                                          
-            updatedAt: new Date()                                                                                                                           
-          }]                                                                                                                                                
-        }                                                                                                                                                   
-      });                                                                                                                                                   
-    });                                                                                                                                                     
   },                                                                                                                                                        
   down() {                                                                                                                                                  
     // Rollback if needed                                                                                                                                   
     Products.remove({});                                                                                                                                    
     Apps.remove({});                                                                                                                                        
-    Meteor.users.update({}, { $unset: { products: 1 } }, { multi: true });                                                                                  
   }                                                                                                                                                         
 });                                                                                                                                                         
                                                                                                                                                             

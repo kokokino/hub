@@ -1,9 +1,34 @@
 import m from 'mithril';
+import { Tracker } from 'meteor/tracker';
+import { Meteor } from 'meteor/meteor';
+import { Products } from '/lib/collections/products';
 import SubscriptionButton from '/imports/ui/components/SubscriptionButton';
 import SubscriberCount from '/imports/ui/components/SubscriberCount';
+import ProductList from '/imports/ui/components/ProductList';
 import { isVerifiedUser } from '/imports/utils.js';
 
 const HomePage = {
+  oninit() {
+    this.baseProduct = null;
+    this.ready = false;
+    
+    this.autorun = Tracker.autorun(() => {
+      this.ready = Meteor.subscribe('products').ready();
+      if (this.ready) {
+        // Find the base product (required product)
+        this.baseProduct = Products.findOne({ isRequired: true, isActive: true });
+        console.log('HomePage: baseProduct:', this.baseProduct);
+      }
+      m.redraw();
+    });
+  },
+  
+  onremove() {
+    if (this.autorun) {
+      this.autorun.stop();
+    }
+  },
+  
   view() {
     return m('section', [
       m('h1', 'Welcome to Kokokino Hub'),
@@ -22,13 +47,17 @@ const HomePage = {
           m('li', ['Currently: ', m(SubscriberCount)])
         ]),
         m('div', 
-          m(SubscriptionButton, {
-            productId: Meteor.settings.public?.lemonSqueezy?.baseMonthlyProductID,
-            label: 'Subscribe to Kokokino Hub ($2/month)',
-            variant: 'primary'
-          })
+          this.baseProduct ? 
+            m(SubscriptionButton, {
+              productId: this.baseProduct._id,
+              label: `Subscribe to ${this.baseProduct.name} ($${this.baseProduct.pricePerMonthUSD.toFixed(2)}/month)`,
+              variant: 'primary'
+            }) :
+            m('p', this.ready ? 'No base product found.' : 'Loading subscription options...')
         )
       ]),
+      
+      m(ProductList),
       
       m('article', [
         m('h2', 'Available Apps'),

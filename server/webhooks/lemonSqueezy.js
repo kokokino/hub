@@ -1,6 +1,7 @@
 import { Meteor } from 'meteor/meteor';
 import { WebApp } from 'meteor/webapp';
 import { createHmac } from 'crypto';
+import { Products } from '/lib/collections/products';
 
 const WEBHOOK_SECRET = Meteor.settings.private?.lemonSqueezy?.lemonSqueezyWebhookSecret;
 if (!WEBHOOK_SECRET) {
@@ -48,6 +49,14 @@ WebApp.connectHandlers.use('/webhooks/lemon-squeezy', async (req, res) => {
   });
 });
 
+// Events that are payment/invoice events (data object is Subscription Invoice, not Subscription)
+const PAYMENT_EVENTS = [
+  'subscription_payment_success',
+  'subscription_payment_failed',
+  'subscription_payment_recovered',
+  'subscription_payment_refunded'
+];
+
 async function handleWebhookEvent(event, data) {
   if (!data.data) {
     console.error('No data.data in webhook payload:', event);
@@ -59,16 +68,30 @@ async function handleWebhookEvent(event, data) {
   // Lemon Squeezy puts custom_data in meta, not attributes
   const customData = data.meta?.custom_data || {};
   const userId = customData.user_id;
-  const kokokinoProductId = customData.kokokino_product_id;
   
   if (!userId) {
     console.error('No user_id found in webhook custom_data:', event);
     return;
   }
   
-  if (!kokokinoProductId) {
-    console.warn('No kokokino_product_id in webhook custom_data:', event, '- subscription may not be linked to a product');
+  // For payment events, the data object is a Subscription Invoice, not a Subscription
+  // It doesn't have product_id, so we need to look up the subscription by subscription_id
+  if (PAYMENT_EVENTS.includes(event)) {
+    await handlePaymentEvent(event, userId, data);
+    return;
   }
+  
+  // For subscription events, look up our product using the Lemon Squeezy product ID
+  // This is the authoritative source - not user-controllable
+  const lemonSqueezyProductId = String(attributes.product_id);
+  const kokokinoProduct = await Products.findOneAsync({ lemonSqueezyProductId: lemonSqueezyProductId });
+  
+  if (!kokokinoProduct) {
+    console.error(`No Kokokino product found for Lemon Squeezy product ID: ${lemonSqueezyProductId}`, event);
+    return;
+  }
+  
+  const kokokinoProductId = kokokinoProduct._id;
   
   switch (event) {
     case 'subscription_created':
@@ -84,18 +107,6 @@ async function handleWebhookEvent(event, data) {
     case 'subscription_resumed':
       await handleSubscriptionResumed(userId, data, kokokinoProductId);
       break;
-    case 'subscription_payment_failed':
-      await handleSubscriptionPaymentFailed(userId, data, kokokinoProductId);
-      break;
-    case 'subscription_payment_success':
-    case 'subscription_payment_recovered':
-      await handleSubscriptionPaymentSuccess(userId, data, kokokinoProductId);
-      break;
-    case 'subscription_payment_refunded':
-      // Refunds are informational - log but don't change subscription status
-      console.log(`Payment refunded for user ${userId}, subscription ${data.data.id}`);
-      await updateLastWebhookReceived(userId);
-      break;
     case 'subscription_plan_changed':
       await handleSubscriptionPlanChanged(userId, data, kokokinoProductId);
       break;
@@ -107,6 +118,66 @@ async function handleWebhookEvent(event, data) {
       break;
     default:
       console.log(`Unhandled webhook event: ${event}`);
+  }
+}
+
+/**
+ * Handle payment events (subscription_payment_success, subscription_payment_failed, etc.)
+ * These events have a Subscription Invoice as the data object, not a Subscription
+ * We look up the existing subscription by subscription_id to find the kokokinoProductId
+ */
+async function handlePaymentEvent(event, userId, data) {
+  const { attributes } = data.data;
+  
+  // Subscription Invoice has subscription_id to link back to the subscription
+  const subscriptionId = String(attributes.subscription_id);
+  
+  if (!subscriptionId) {
+    console.error(`No subscription_id in payment event: ${event}`);
+    return;
+  }
+  
+  // Find the user and their subscription by subscriptionId
+  const user = await Meteor.users.findOneAsync({
+    _id: userId,
+    'lemonSqueezy.subscriptions.subscriptionId': subscriptionId
+  });
+  
+  if (!user) {
+    console.error(`No subscription found for user ${userId} with subscriptionId ${subscriptionId}`);
+    await updateLastWebhookReceived(userId);
+    return;
+  }
+  
+  const existingSubscription = user.lemonSqueezy.subscriptions.find(
+    sub => sub.subscriptionId === subscriptionId
+  );
+  
+  if (!existingSubscription) {
+    console.error(`Subscription ${subscriptionId} not found in user's subscriptions`);
+    await updateLastWebhookReceived(userId);
+    return;
+  }
+  
+  const kokokinoProductId = existingSubscription.kokokinoProductId;
+  
+  switch (event) {
+    case 'subscription_payment_success':
+    case 'subscription_payment_recovered':
+      // Payment succeeded - update timestamp, subscription status should be updated via subscription_updated event
+      console.log(`Payment success for user ${userId}, subscription ${subscriptionId}, product ${kokokinoProductId}`);
+      await updateLastWebhookReceived(userId);
+      break;
+    case 'subscription_payment_failed':
+      // Payment failed - log it, subscription status should be updated via subscription_updated event
+      console.log(`Payment failed for user ${userId}, subscription ${subscriptionId}, product ${kokokinoProductId}`);
+      await updateLastWebhookReceived(userId);
+      break;
+    case 'subscription_payment_refunded':
+      // Refund is informational
+      console.log(`Payment refunded for user ${userId}, subscription ${subscriptionId}, product ${kokokinoProductId}`);
+      await updateLastWebhookReceived(userId);
+      break;
   }
 }
 
@@ -133,11 +204,11 @@ function buildSubscriptionData(data, kokokinoProductId) {
   const validUntil = determineValidUntil(attributes);
   
   return {
-    subscriptionId: subscriptionId,
+    subscriptionId: String(subscriptionId),
     kokokinoProductId: kokokinoProductId,
-    lemonSqueezyProductId: attributes.product_id,
-    lemonSqueezyVariantId: attributes.variant_id,
-    customerId: attributes.customer_id,
+    lemonSqueezyProductId: String(attributes.product_id),
+    lemonSqueezyVariantId: String(attributes.variant_id),
+    customerId: String(attributes.customer_id),
     productName: attributes.product_name,
     variantName: attributes.variant_name,
     status: attributes.status,
@@ -294,26 +365,6 @@ async function handleSubscriptionResumed(userId, data, kokokinoProductId) {
   const subscriptionData = buildSubscriptionData(data, kokokinoProductId);
   await upsertSubscription(userId, subscriptionData);
   console.log(`Subscription resumed for user ${userId}, product ${kokokinoProductId}`);
-}
-
-/**
- * Handle subscription_payment_failed event
- * Payment failed - status is typically "past_due" or "unpaid"
- */
-async function handleSubscriptionPaymentFailed(userId, data, kokokinoProductId) {
-  const subscriptionData = buildSubscriptionData(data, kokokinoProductId);
-  await upsertSubscription(userId, subscriptionData);
-  console.log(`Subscription payment failed for user ${userId}, product ${kokokinoProductId}, status: ${subscriptionData.status}`);
-}
-
-/**
- * Handle subscription_payment_success and subscription_payment_recovered events
- * Payment succeeded - subscription should be active
- */
-async function handleSubscriptionPaymentSuccess(userId, data, kokokinoProductId) {
-  const subscriptionData = buildSubscriptionData(data, kokokinoProductId);
-  await upsertSubscription(userId, subscriptionData);
-  console.log(`Subscription payment success for user ${userId}, product ${kokokinoProductId}`);
 }
 
 /**

@@ -24,6 +24,7 @@ Migrations.add({
       description: 'Access to fundamental apps and games including Backlog Beacon',
       sortOrder: 0,
       pricePerMonthUSD: 2.00,
+      lemonSqueezyProductId: '739029',
       lemonSqueezyBuyLinkId: '53df2db1-9867-460f-86b4-fc317238b88a', 
       isApproved: true,
       isRequired: true,

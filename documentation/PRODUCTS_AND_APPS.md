@@ -16,7 +16,8 @@ We're transitioning from a single-subscription model to a multi-product system w
   name: String,          // Display name (e.g., "Base Monthly")                                                                                             
   description: String,    // Detailed description                                                                                                           
   sortOrder: Number,     // Display order (lower = first)                                                                                                   
-  lemonSqueezyBuyLinkId: String,     // Lemon Squeezy checkout link ID                                                                                   
+  lemonSqueezyProductId: String,     // Lemon Squeezy product ID (e.g., "739029")
+  lemonSqueezyBuyLinkId: String,     // Lemon Squeezy checkout link UUID                                                                                   
   pricePerMonthUSD: Number,  // Decimal price (e.g., 2.00)                                                                                                  
   gitHubURL: String,     // Optional GitHub repo link                                                                                                       
   paymentInstructions: String, // Payment details for owners                                                                                                
@@ -124,7 +125,30 @@ user.lemonSqueezy: {
    - On trial: `trialEndsAt` or `renewsAt`
    - Expired: `endsAt`
 
-4. **Custom data in checkout**: When creating a checkout, we pass `kokokino_product_id` in the custom data so webhooks can associate the subscription with our product.
+4. **Product lookup via lemonSqueezyProductId**: When a webhook arrives, we look up our product using the `lemonSqueezyProductId` from the webhook payload (e.g., "739029"). This is authoritative and not user-controllable.
+
+## Security Model
+
+### Why we don't pass kokokino_product_id in checkout URL
+
+Previously, we passed `kokokino_product_id` in the checkout URL's custom data. This was a security vulnerability:
+
+1. User clicks subscribe for Product A ($2/month)
+2. URL contains `kokokino_product_id=A`
+3. Attacker modifies URL to `kokokino_product_id=B` (expensive product)
+4. Attacker pays $2 for Product A
+5. Webhook arrives with attacker's `kokokino_product_id=B`
+6. System grants access to Product B
+
+### Current secure approach
+
+1. Each Kokokino product has a `lemonSqueezyProductId` field (e.g., "739029")
+2. Checkout URL only contains `user_id` in custom data
+3. When webhook arrives, we extract `attributes.product_id` from the payload
+4. We look up our product by `lemonSqueezyProductId`
+5. The `lemonSqueezyProductId` comes from Lemon Squeezy's servers, not user input
+
+This ensures users can only get access to the product they actually paid for.
 
 ## Querying Active Subscriptions
 
@@ -157,20 +181,26 @@ const queryAny = {
 
 When Lemon Squeezy sends a webhook:
 
-1. **Extract custom data** from `data.meta.custom_data`:
-   - `user_id`: The Kokokino user ID
-   - `kokokino_product_id`: Our Products collection `_id`
+1. **Verify signature** using HMAC-SHA256 with webhook secret
 
-2. **Build subscription data** from webhook attributes including:
+2. **Extract user_id** from `data.meta.custom_data`
+
+3. **Look up Kokokino product** using `attributes.product_id` (Lemon Squeezy's product ID):
+   ```javascript
+   const lemonSqueezyProductId = String(attributes.product_id);
+   const kokokinoProduct = await Products.findOneAsync({ lemonSqueezyProductId });
+   ```
+
+4. **Build subscription data** from webhook attributes including:
    - Lemon Squeezy IDs (subscription, product, variant, customer)
    - Status and dates (validUntil, renewsAt, endsAt, etc.)
    - Customer portal URL
 
-3. **Upsert subscription** in user's `lemonSqueezy.subscriptions` array:
+5. **Upsert subscription** in user's `lemonSqueezy.subscriptions` array:
    - Key on `kokokinoProductId`
    - Update existing or push new subscription
 
-4. **Handle expiry**: On `subscription_expired` event, remove the subscription from the array.
+6. **Handle expiry**: On `subscription_expired` event, remove the subscription from the array.
 
 ## Checkout Flow
 
@@ -178,13 +208,11 @@ When a user clicks Subscribe:
 
 1. **Validate**: Check user is logged in, email verified, no existing active subscription for this product
 
-2. **Build checkout URL** with custom data:
+2. **Build checkout URL** with only user_id in custom data:
    ```
    https://{storeName}.lemonsqueezy.com/checkout/buy/{buyLinkId}
      ?checkout[email]={userEmail}
      &checkout[custom][user_id]={userId}
-     &checkout[custom][email]={userEmail}
-     &checkout[custom][kokokino_product_id]={productId}
    ```
 
 3. **Redirect** user to Lemon Squeezy checkout
@@ -216,7 +244,8 @@ Migrations.add({
       name: 'Base Monthly',                                                                                                                                 
       description: 'Access to fundamental apps and games including Backlog Beacon',                                                                         
       sortOrder: 0,                                                                                                                                         
-      pricePerMonthUSD: 2.00,                                                                                                                               
+      pricePerMonthUSD: 2.00,
+      lemonSqueezyProductId: '739029',
       lemonSqueezyBuyLinkId: '53df2db1-9867-460f-86b4-fc317238b88a', 
       isApproved: true,                                                                                                                                     
       isRequired: true,                                                                                                                                       
@@ -256,9 +285,9 @@ Migrations.add({
 - [x] Set up migration system with quave:migrations
 - [x] Run initial migration for base product and Backlog Beacon app
 - [x] Update webhooks to use new `lemonSqueezy.subscriptions` array structure
-- [x] Extract `kokokino_product_id` from webhook custom data
+- [x] Look up kokokinoProductId from lemonSqueezyProductId in webhook (secure approach)
 - [x] Update `subscriptions.getStatus` method to accept productId
-- [x] Update `subscriptions.createCheckout` to pass `kokokino_product_id` in custom data
+- [x] Update `subscriptions.createCheckout` to use simplified URL (no kokokino_product_id)
 - [x] Update `activeSubscriberCount` publication to accept productId
 - [x] Update SubscriberCount component to accept productId prop
 - [x] Update SubscriptionButton component to work with productId
@@ -343,6 +372,7 @@ Handles subscription flow for a specific product:
 2. **Method Security**: Check user permissions for admin methods                                                                                                
 3. **Ownership Security**: Validate ownership assignments                                                                                                       
 4. **Webhook Security**: Verify signature using HMAC-SHA256
+5. **Product Lookup Security**: Always look up kokokinoProductId from lemonSqueezyProductId in webhook payload, never trust user-provided custom data for product identification
 
 ## Future Enhancements                                                                                                                                         
 

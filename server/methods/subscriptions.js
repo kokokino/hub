@@ -147,8 +147,9 @@ Meteor.methods({
     
     const storeName = Meteor.settings.private.lemonSqueezy?.storeName || 'kokokino';
     // Lemon Squeezy custom data format: checkout[custom][key]=value
-    // Note: using snake_case for custom data keys as that's what we extract in webhooks
-    const checkoutUrl = `https://${storeName}.lemonsqueezy.com/checkout/buy/${product.lemonSqueezyBuyLinkId}?checkout[email]=${encodeURIComponent(email)}&checkout[custom][user_id]=${this.userId}&checkout[custom][email]=${encodeURIComponent(email)}&checkout[custom][kokokino_product_id]=${encodeURIComponent(productId)}`;
+    // Note: We only pass user_id - the product is determined by the buy link
+    // The webhook will look up our product using lemonSqueezyProductId from the webhook payload
+    const checkoutUrl = `https://${storeName}.lemonsqueezy.com/checkout/buy/${product.lemonSqueezyBuyLinkId}?checkout[email]=${encodeURIComponent(email)}&checkout[custom][user_id]=${this.userId}`;
     
     return {
       checkoutUrl: checkoutUrl,

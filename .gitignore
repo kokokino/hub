@@ -5,6 +5,8 @@ node_modules/
 
 # Environment variables and settings
 settings.json
+settings.development.json
+settings.production.json
 .env
 .env.local
 .env.development.local
@@ -39,3 +41,9 @@ coverage/
 
 # Aider
 .aider*
+
+# Private keys (NEVER commit these)
+private/keys/*.pem
+private/keys/private.pem
+*.pem
+!public.pem

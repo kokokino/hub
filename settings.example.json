@@ -1,8 +1,6 @@
 {
   "public": {
-    "appName": "Kokokino Hub", 
-    "lemonSqueezy": {
-    }
+    "appName": "Kokokino Hub"
   },
   "private": {
     "MAIL_URL": "smtp://username:password@smtp.example.com:587",
@@ -11,6 +9,20 @@
       "storeName": "kokokino",
       "apiKey": "your-api-key",
       "lemonSqueezyWebhookSecret": "your-webhook-secret"
+    },
+    "spokeApiKeys": {
+      "spoke_app_skeleton": "generate-a-random-32-char-string-here",
+      "backlog_beacon": "generate-another-random-32-char-string"
+    },
+    "spokes": {
+      "spoke_app_skeleton": {
+        "url": "http://localhost:3001",
+        "name": "Spoke App Skeleton"
+      },
+      "backlog_beacon": {
+        "url": "http://localhost:3002",
+        "name": "Backlog Beacon"
+      }
     }
   }
 }

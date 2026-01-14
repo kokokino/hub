@@ -43,7 +43,5 @@ coverage/
 .aider*
 
 # Private keys (NEVER commit these)
-private/keys/*.pem
-private/keys/private.pem
 *.pem
 !public.pem

@@ -12,6 +12,7 @@ const AppsList = {
     this.baseProduct = null;
     this.user = null;
     this.userSubscriptions = [];
+    this.launching = null; // Track which app is being launched
     
     this.autorun = Tracker.autorun(() => {
       const appsReady = Meteor.subscribe('apps').ready();
@@ -95,6 +96,18 @@ const AppsList = {
   },
   
   /**
+   * Check if an app has SSO configured (can be launched)
+   */
+  hasSsoConfigured(app) {
+    // Check if app has spokeId set
+    if (app.spokeId) return true;
+    
+    // Check if there's a spoke configured in settings for this app
+    const spokes = Meteor.settings?.public?.spokes || {};
+    return !!spokes[app._id];
+  },
+  
+  /**
    * Get the list of missing requirements for launching an app
    * Returns an array of missing subscription names
    */
@@ -139,9 +152,35 @@ const AppsList = {
   
   /**
    * Handle launch button click
+   * Generates SSO token and redirects to spoke app
    */
   handleLaunch(app) {
-    alert('Coming soon');
+    if (this.launching) return; // Prevent double-clicks
+    
+    this.launching = app._id;
+    m.redraw();
+    
+    Meteor.call('sso.generateToken', app._id, (error, result) => {
+      if (error) {
+        console.error('Launch error:', error);
+        
+        // Show appropriate error message
+        if (error.error === 'subscription-required') {
+          alert(error.reason || 'Subscription required to launch this app');
+        } else if (error.error === 'not-configured') {
+          alert('This app is not yet available for launch');
+        } else {
+          alert('Failed to launch app. Please try again.');
+        }
+        
+        this.launching = null;
+        m.redraw();
+        return;
+      }
+      
+      // Redirect to the spoke app with SSO token
+      window.location.href = result.redirectUrl;
+    });
   },
   
   view() {
@@ -158,6 +197,8 @@ const AppsList = {
       const productName = product ? product.name : 'Unknown Product';
       const canLaunch = this.canLaunchApp(app);
       const launchInstructions = !canLaunch ? this.getLaunchInstructions(app) : '';
+      const isLaunching = this.launching === app._id;
+      const hasSso = this.hasSsoConfigured(app);
       
       return m('div', { key: app._id }, [
         m('article', [
@@ -165,8 +206,9 @@ const AppsList = {
           m('p', app.description),
           canLaunch
             ? m('button', {
-                onclick: () => this.handleLaunch(app)
-              }, 'Launch')
+                onclick: () => this.handleLaunch(app),
+                disabled: isLaunching || !hasSso
+              }, isLaunching ? 'Launching...' : (hasSso ? 'Launch' : 'Coming Soon'))
             : m('p', m('small', m('em', launchInstructions))),
           m('footer', m('small', `Included in ${productName}`))
         ])

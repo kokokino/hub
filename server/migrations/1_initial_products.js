@@ -36,11 +36,28 @@ Migrations.add({
 
     console.log('✓ Created base product with ID:', baseProductId);
 
+    // Create Skeleton App
+    await Apps.insertAsync({
+      name: 'Spoke App Skeleton',
+      description: 'Make your own app starter template and general chat room',
+      productId: baseProductId,
+      spokeId: 'spoke_app_skeleton',
+      ageRating: 'E',
+      isApproved: true,
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      createdBy: 'system'
+    });
+
+    console.log('✓ Created Spoke App Skeleton');
+
     // Create Backlog Beacon App
     await Apps.insertAsync({
       name: 'Backlog Beacon',
       description: 'Track your personal video game collection',
       productId: baseProductId,
+      spokeId: 'backlog_beacon',
       ageRating: 'E',
       isApproved: true,
       isActive: true,

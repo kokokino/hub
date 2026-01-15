@@ -108,6 +108,7 @@ Meteor.publish('apps', function() {
       name: 1,
       description: 1,
       productId: 1,
+      spokeId: 1,
       ageRating: 1,
       isActive: 1,
       isApproved: 1

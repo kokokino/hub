@@ -199,6 +199,8 @@ const AppsList = {
       const launchInstructions = !canLaunch ? this.getLaunchInstructions(app) : '';
       const isLaunching = this.launching === app._id;
       const hasSso = this.hasSsoConfigured(app);
+
+      //console.log(`${app._id} hasSso: ${hasSso}`);
       
       return m('div', { key: app._id }, [
         m('article', [

@@ -77,7 +77,7 @@ Meteor.publish('activeSubscriberCount', async function(productId) {
 
 // Add publications for products and apps
 Meteor.publish('products', function() {
-  console.log('Products publication called for user:', this.userId);
+  // console.log('Products publication called for user:', this.userId);
   const cursor = Products.find({
     isApproved: true,
     isActive: true
@@ -99,7 +99,7 @@ Meteor.publish('products', function() {
 });
 
 Meteor.publish('apps', function() {
-  console.log('Apps publication called for user:', this.userId);
+  // console.log('Apps publication called for user:', this.userId);
   const cursor = Apps.find({
     isApproved: true,
     isActive: true

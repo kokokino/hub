@@ -29,13 +29,14 @@ It provides:
 
 - User account management
 - Billing and subscription handling
-- Single Sign‑On (SSO) for all other Kokokino apps (e.g., **Backlog Beacon** and other community apps)
+- Single Sign‑On (SSO) for all other Kokokino apps (e.g., **App Skeleton**, **Backlog Beacon** and other community apps)
 
 The name “Hub” evokes a wheel where spokes (individual apps) connect back to the center.
 
 ## App Structure
 - **Hub** – A standalone app that serves as the central entry point and SSO provider.
-- **Backlog Beacon** – Included in the standard $2 monthly charge.  
+- **App Skeleton** – Minimal sample spoke to fork your own project. Has chat that works like a poor man's Discord. Included in the standard $2 monthly charge.  
+- **Backlog Beacon** – Place to track your video game collection. Included in the standard $2 monthly charge.  
   Other ambitious projects may require their own monthly charge.
 
 Each app is provisioned separately, allowing independent development and deployment while relying on the Hub for authentication and billing.

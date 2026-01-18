@@ -1014,8 +1014,8 @@ spoke_app_skeleton/
 ```
 ~/Documents/programming/kokokino/
 ├── hub/                      # Port 3000
-├── spoke_app_skeleton/       # Port 3001
-├── backlog_beacon/           # Port 3002
+├── spoke_app_skeleton/       # Port 3010
+├── backlog_beacon/           # Port 3020
 └── documentation/            # Shared docs (optional)
 ```
 
@@ -1031,8 +1031,8 @@ meteor --settings settings.development.json
 **Terminal 2 - Spoke:**
 ```bash
 cd ~/Documents/programming/kokokino/spoke_app_skeleton
-meteor --port 3001 --settings settings.development.json
-# Running at http://localhost:3001
+meteor --port 3010 --settings settings.development.json
+# Running at http://localhost:3010
 ```
 
 ### Development Settings
@@ -1052,11 +1052,11 @@ meteor --port 3001 --settings settings.development.json
     },
     "spokes": {
       "spoke_app_skeleton": {
-        "url": "http://localhost:3001",
+        "url": "http://localhost:3010",
         "name": "Spoke App Skeleton"
       },
       "backlog_beacon": {
-        "url": "http://localhost:3002",
+        "url": "http://localhost:3020",
         "name": "Backlog Beacon"
       }
     },
@@ -1226,5 +1226,5 @@ Future feature for community-contributed spokes:
 
 ---
 
-*Last updated: 2025-01-08*
+*Last updated: 2025-01-18*
 *Document version: 1.0*

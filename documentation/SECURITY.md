@@ -15,7 +15,7 @@ We release security updates for the latest stable version of Kokokino Hub. We do
 
 If you believe you have found a security vulnerability in Kokokino Hub, please report it privately to the maintainers.
 
-1. **Email**: [INSERT SECURE CONTACT EMAIL]
+1. **Email**: security@kokokino.com
 2. **Key details to include**:
    - Type of vulnerability
    - Steps to reproduce

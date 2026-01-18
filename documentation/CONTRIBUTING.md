@@ -61,6 +61,6 @@ Thank you for your interest in contributing to Kokokino Hub! We welcome contribu
 
 ## Community
 
-Join our community discussions on [Discord/Slack/Forum] (link to be added) to ask questions and share ideas.
+Join our community discussions on the Skeleton app chat to ask questions and share ideas.
 
 Thank you for helping make Kokokino Hub better!

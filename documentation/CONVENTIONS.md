@@ -51,9 +51,26 @@ We welcome contributions from developers, designers, and game creators of all sk
 Check the individual app repositories for contribution guidelines and issue trackers.
 
 ## Meteor style guide
-1. Many older Meteor package won't work since we are focused on Meteor v3
+1. Many older Meteor package won't work since we are focused on Meteor v3 and there are breaking changes mostly around deprecating asynchronous fibers and using modern async/await functions.
 2. Must use async/await pattern with many method calls since we are no longer using fibers for asynchronous calls
-3. Packages `autopublish` and `insecure` are not installed. They are for rapid prototyping, not for deployed code. 
+3. When implementing Meteor calls, subscriptions, publications, collections, etc, please use the modern Meteor v3 API without fibers.
+4. When recommending Atmosphere packages try to pick ones that are Meteor v3 compatible. 
+5. Packages `autopublish` and `insecure` are purposely not installed. They are for rapid prototyping at a hackathon, not for deployed code. Do not suggest for these to be installed and advise developers not to use these packages. 
+
+## UI style guide
+1. Try to leverage PICO.css design patterns as much as possible so we don't re-invent the wheel. 
+2. Avoid inline styles. 
+3. Use meaningful CSS class names and ids such as "warning" instead "yellow" but then in the CSS file you can make it a yellow color. 
+4. Use Mithril as much as possible but it's ok to integrate with Blaze at times for packages such as accounts-ui. Avoid using other libraries like React as much as possible unless specifically instructed to do so for a very particular reason. Mithril is good at being able to play nice with other UI libraries and frameworks when needed. 
+
+## Javascript style guide
+1. Always think about security and protecting from malicious users. 
+2. Think about rate limiting and potential exploits. 
+3. Always use curly braces with "if" blocks even if they are very simple. 
+4. Avoid early returns as much as possible. Prefer for functions to have a single return statement at the end. 
+5. Use keyword "const" for variable names as much as possible unless it needs to be "let" and generally avoid the use of "var". 
+6. Every variable declaration should be on its own line. Do not use the comma syntax to define multiple at once. 
+7. Give every variable a readable word name like "document" and avoid acronyms like "doc" - The only exception is simple counters where a variable like "i" can be acceptable but even then "count" is preferred. 
 
 ---
-*Last updated: 2026‑01‑08*
+*Last updated: 2026‑01‑18*

@@ -85,7 +85,7 @@ const FAQPage = {
       ]),
       
       m('article', [
-        m('h2', 'What if I want native app that gets installed on the player\'s device?'),
+        m('h2', 'What if I want a native app that gets installed on the player\'s device?'),
         m('p',
           'You might want to stick with web technologies like PWA to offer an "offline first" experience where the user doesn\'t have to be connected to the internet to play, or can play with an unstable connection. But if you truly want a natively installed app then you\'ll need to host it elsewhere as we are not setup for that.'
         ),

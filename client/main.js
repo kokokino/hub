@@ -17,6 +17,7 @@ import ContactPage from '/imports/ui/pages/Contact.js';
 import AboutPage from '/imports/ui/pages/About.js';
 import PrivacyPolicyPage from '/imports/ui/pages/PrivacyPolicy.js';
 import SecurePaymentsPage from '/imports/ui/pages/SecurePayments.js';
+import FAQPage from '/imports/ui/pages/FAQ.js';
 import SubscriptionButton from '/imports/ui/components/SubscriptionButton';
 import { isVerifiedUser, routeLink } from '/imports/utils.js';
 
@@ -169,6 +170,7 @@ const Footer = {
         m('ul', { style: 'display: flex; gap: 1.5rem; margin: 0; padding: 0; list-style: none;' }, [
           m('li', m('a', routeLink('/contact'), 'Contact')),
           m('li', m('a', routeLink('/about'), 'About')),
+          m('li', m('a', routeLink('/faq'), 'FAQ')),
           m('li', m('a', routeLink('/privacy'), 'Privacy Policy')),
           m('li', m('a', routeLink('/secure-payments'), 'Secure Payments')),
           m('li', m('a[href="https://github.com/kokokino/hub"]', { target: '_blank', rel: 'noopener noreferrer' }, 'GitHub'))
@@ -186,6 +188,7 @@ const App = {
     let page;
     if (route === '/contact') page = ContactPage;
     else if (route === '/about') page = AboutPage;
+    else if (route === '/faq') page = FAQPage;
     else if (route === '/privacy') page = PrivacyPolicyPage;
     else if (route === '/secure-payments') page = SecurePaymentsPage;
     else page = HomePage;
@@ -206,6 +209,7 @@ const routes = {
   '/': App,
   '/contact': App,
   '/about': App,
+  '/faq': App,
   '/privacy': App,
   '/secure-payments': App
 };

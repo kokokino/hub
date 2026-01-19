@@ -193,6 +193,6 @@ export async function cleanupExpiredNonces() {
     expiresAt: { $lt: new Date() }
   });
   if (result > 0) {
-    console.log(`Cleaned up ${result} expired SSO nonces`);
+    //console.log(`Cleaned up ${result} expired SSO nonces`);
   }
 }

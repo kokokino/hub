@@ -109,6 +109,7 @@ hub/
 - **Pico CSS** – Minimal CSS framework
 - **MongoDB** – Database
 - **Lemon Squeezy** – Billing and subscriptions
+- **quave:migrations** - For managing changes to the database
 
 ### Running Locally
 

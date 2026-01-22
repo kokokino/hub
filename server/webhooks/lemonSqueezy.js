@@ -2,6 +2,42 @@ import { Meteor } from 'meteor/meteor';
 import { WebApp } from 'meteor/webapp';
 import { createHmac } from 'crypto';
 import { Products } from '/lib/collections/products';
+import { ProcessedWebhooks } from '/lib/collections/processedWebhooks';
+
+// TTL for processed webhook entries (24 hours in milliseconds)
+const WEBHOOK_TTL_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Marks a webhook as processed using a unique key.
+ * Uses MongoDB unique index to ensure idempotency across instances.
+ * @param {string} eventType - The webhook event type
+ * @param {string} objectId - The object ID from the webhook data
+ * @param {string} updatedAt - The updated_at timestamp from the webhook
+ * @returns {Promise<boolean>} - True if this is a new webhook, false if already processed
+ */
+async function markWebhookProcessed(eventType, objectId, updatedAt) {
+  const webhookKey = `${eventType}:${objectId}:${updatedAt}`;
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + WEBHOOK_TTL_MS);
+
+  try {
+    await ProcessedWebhooks.insertAsync({
+      webhookKey,
+      eventType,
+      objectId,
+      processedAt: now,
+      expiresAt
+    });
+    return true;
+  } catch (error) {
+    // Duplicate key error means webhook was already processed
+    if (error.code === 11000) {
+      return false;
+    }
+    // Re-throw unexpected errors
+    throw error;
+  }
+}
 
 const WEBHOOK_SECRET = Meteor.settings.private?.lemonSqueezy?.lemonSqueezyWebhookSecret;
 if (!WEBHOOK_SECRET) {
@@ -36,9 +72,23 @@ WebApp.connectHandlers.use('/webhooks/lemon-squeezy', async (req, res) => {
       
       const data = JSON.parse(body);
       const event = req.headers['x-event-name'];
-      
+
+      // Extract unique identifiers for idempotency check
+      const objectId = data.data?.id ? String(data.data.id) : null;
+      const updatedAt = data.data?.attributes?.updated_at || new Date().toISOString();
+
+      if (objectId) {
+        // Check if this exact webhook was already processed
+        const isNew = await markWebhookProcessed(event, objectId, updatedAt);
+        if (!isNew) {
+          console.log(`Webhook already processed: ${event}:${objectId}:${updatedAt}`);
+          res.writeHead(200);
+          return res.end('Webhook already processed');
+        }
+      }
+
       await handleWebhookEvent(event, data);
-      
+
       res.writeHead(200);
       res.end('Webhook processed');
     } catch (error) {

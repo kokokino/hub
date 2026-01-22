@@ -1,12 +1,12 @@
 import { Meteor } from 'meteor/meteor';
-
-// In-memory rate limit tracking
-// In production, consider using Redis for multi-instance support
-const rateLimits = new Map();
+import { RateLimits } from '/lib/collections/rateLimits';
 
 // Rate limit configuration
 const RATE_LIMIT_PER_MINUTE = 100;
 const RATE_LIMIT_PER_HOUR = 1000;
+
+// TTL for rate limit entries (1 hour in milliseconds)
+const RATE_LIMIT_TTL_MS = 60 * 60 * 1000;
 
 /**
  * Validates the spoke API key from the Authorization header
@@ -42,40 +42,44 @@ export async function apiKeyMiddleware(req) {
 }
 
 /**
- * Checks rate limits for a spoke
+ * Checks rate limits for a spoke using MongoDB for multi-instance support
  * @param {string} spokeId - The spoke identifier
  * @returns {Object} - { allowed: boolean, retryAfter?: number }
  */
 export async function rateLimitMiddleware(spokeId) {
-  const now = Date.now();
-  const minuteAgo = now - 60000;
-  const hourAgo = now - 3600000;
+  const now = new Date();
+  const minuteAgo = new Date(now.getTime() - 60000);
+  const hourAgo = new Date(now.getTime() - 3600000);
 
-  // Get or create rate limit entry for this spoke
-  if (!rateLimits.has(spokeId)) {
-    rateLimits.set(spokeId, { requests: [] });
-  }
+  // Count requests in last minute
+  const requestsLastMinute = await RateLimits.find({
+    spokeId,
+    timestamp: { $gt: minuteAgo }
+  }).countAsync();
 
-  const spokeLimit = rateLimits.get(spokeId);
-  
-  // Clean up old requests
-  spokeLimit.requests = spokeLimit.requests.filter(time => time > hourAgo);
-
-  // Count requests in last minute and hour
-  const requestsLastMinute = spokeLimit.requests.filter(time => time > minuteAgo).length;
-  const requestsLastHour = spokeLimit.requests.length;
-
-  // Check limits
+  // Check minute limit
   if (requestsLastMinute >= RATE_LIMIT_PER_MINUTE) {
     return { allowed: false, retryAfter: 60 };
   }
 
+  // Count requests in last hour
+  const requestsLastHour = await RateLimits.find({
+    spokeId,
+    timestamp: { $gt: hourAgo }
+  }).countAsync();
+
+  // Check hour limit
   if (requestsLastHour >= RATE_LIMIT_PER_HOUR) {
     return { allowed: false, retryAfter: 3600 };
   }
 
-  // Record this request
-  spokeLimit.requests.push(now);
+  // Record this request with TTL for auto-cleanup
+  const expiresAt = new Date(now.getTime() + RATE_LIMIT_TTL_MS);
+  await RateLimits.insertAsync({
+    spokeId,
+    timestamp: now,
+    expiresAt
+  });
 
   return { allowed: true };
 }

@@ -151,24 +151,21 @@ export async function verifySsoToken(token, expectedAppId) {
       return { valid: false, error: 'wrong_app' };
     }
 
-    // Check nonce hasn't been used
-    const nonceRecord = await SsoNonces.findOneAsync({ 
-      nonce: payload.nonce,
-      appId: expectedAppId
-    });
+    // Atomically find unused nonce AND mark as used in one operation
+    // This prevents race conditions when multiple Hub instances process the same token
+    const result = await SsoNonces.rawCollection().findOneAndUpdate(
+      {
+        nonce: payload.nonce,
+        appId: expectedAppId,
+        usedAt: { $exists: false }
+      },
+      { $set: { usedAt: new Date() } },
+      { returnDocument: 'before' }
+    );
 
-    if (!nonceRecord) {
-      return { valid: false, error: 'invalid_nonce' };
+    if (!result) {
+      return { valid: false, error: 'invalid_or_reused_nonce' };
     }
-
-    if (nonceRecord.usedAt) {
-      return { valid: false, error: 'nonce_reused' };
-    }
-
-    // Mark nonce as used
-    await SsoNonces.updateAsync(nonceRecord._id, {
-      $set: { usedAt: new Date() }
-    });
 
     return { valid: true, payload };
 
@@ -184,15 +181,3 @@ export async function verifySsoToken(token, expectedAppId) {
   }
 }
 
-/**
- * Cleans up expired nonces
- * Should be called periodically
- */
-export async function cleanupExpiredNonces() {
-  const result = await SsoNonces.removeAsync({
-    expiresAt: { $lt: new Date() }
-  });
-  if (result > 0) {
-    //console.log(`Cleaned up ${result} expired SSO nonces`);
-  }
-}

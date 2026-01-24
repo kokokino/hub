@@ -3,6 +3,7 @@ import { Tracker } from 'meteor/tracker';
 import { Meteor } from 'meteor/meteor';
 import { Apps } from '/lib/collections/apps';
 import { Products } from '/lib/collections/products';
+import { routeLink } from '/imports/utils.js';
 
 const AppsList = {
   oninit() {
@@ -13,7 +14,6 @@ const AppsList = {
     this.user = null;
     this.userSubscriptions = [];
     this.launching = null; // Track which app is being launched
-    this.expandedDescriptions = {}; // Track expanded state per app card
     
     this.autorun = Tracker.autorun(() => {
       const appsReady = Meteor.subscribe('apps').ready();
@@ -203,8 +203,7 @@ const AppsList = {
 
       //console.log(`${app._id} hasSso: ${hasSso}`);
       
-      const isExpanded = this.expandedDescriptions[app._id];
-      const descriptionClass = isExpanded ? 'app-description' : 'app-description truncated';
+      const appSlug = app.slug || app._id;
 
       return m('div', { key: app._id }, [
         m('article.app-card', [
@@ -215,12 +214,8 @@ const AppsList = {
                 disabled: isLaunching || !hasSso
               }, isLaunching ? 'Launching...' : (hasSso ? 'Launch' : 'Coming Soon'))
             : m('p', m('small', m('em', launchInstructions))),
-          m('p', { class: descriptionClass }, app.description),
-          m('span.read-more-link', {
-            onclick: () => {
-              this.expandedDescriptions[app._id] = !isExpanded;
-            }
-          }, isExpanded ? 'Read less' : 'Read more'),
+          m('p.app-description.truncated', app.description),
+          m('a.read-more-link', routeLink(`/apps/${appSlug}`), 'Read more'),
           m('footer', m('small', [
             `Included in ${productName}`,
             app.gitHubUrl ? [' · ', m('a', {

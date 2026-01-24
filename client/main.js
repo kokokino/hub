@@ -18,6 +18,8 @@ import AboutPage from '/imports/ui/pages/About.js';
 import PrivacyPolicyPage from '/imports/ui/pages/PrivacyPolicy.js';
 import SecurePaymentsPage from '/imports/ui/pages/SecurePayments.js';
 import FAQPage from '/imports/ui/pages/FAQ.js';
+import AppDetailPage from '/imports/ui/pages/AppDetailPage.js';
+import SitemapPage from '/imports/ui/pages/SitemapPage.js';
 import SubscriptionButton from '/imports/ui/components/SubscriptionButton';
 import { isVerifiedUser, routeLink } from '/imports/utils.js';
 
@@ -173,6 +175,7 @@ const Footer = {
           m('li', m('a', routeLink('/faq'), 'FAQ')),
           m('li', m('a', routeLink('/privacy'), 'Privacy Policy')),
           m('li', m('a', routeLink('/secure-payments'), 'Secure Payments')),
+          m('li', m('a', routeLink('/sitemap'), 'Sitemap')),
           m('li', m('a[href="https://github.com/kokokino/hub"]', { target: '_blank', rel: 'noopener noreferrer' }, 'GitHub'))
         ]),
         m('small', `© ${new Date().getFullYear()} Kokokino. All code is open source.`)
@@ -183,21 +186,35 @@ const Footer = {
 
 // Main App Component
 const App = {
-  view() {
+  view(vnode) {
     const route = m.route.get();
     let page;
-    if (route === '/contact') page = ContactPage;
-    else if (route === '/about') page = AboutPage;
-    else if (route === '/faq') page = FAQPage;
-    else if (route === '/privacy') page = PrivacyPolicyPage;
-    else if (route === '/secure-payments') page = SecurePaymentsPage;
-    else page = HomePage;
+    let pageAttrs = {};
+
+    if (route === '/contact') {
+      page = ContactPage;
+    } else if (route === '/about') {
+      page = AboutPage;
+    } else if (route === '/faq') {
+      page = FAQPage;
+    } else if (route === '/privacy') {
+      page = PrivacyPolicyPage;
+    } else if (route === '/secure-payments') {
+      page = SecurePaymentsPage;
+    } else if (route === '/sitemap') {
+      page = SitemapPage;
+    } else if (route.startsWith('/apps/')) {
+      page = AppDetailPage;
+      pageAttrs = { slug: vnode.attrs.slug };
+    } else {
+      page = HomePage;
+    }
 
     return m('div', [
       m(Header),
       m('main.container', [
         route === '/' ? m(VerificationNotice) : null,
-        m(page)
+        m(page, pageAttrs)
       ]),
       m(Footer)
     ]);
@@ -211,7 +228,9 @@ const routes = {
   '/about': App,
   '/faq': App,
   '/privacy': App,
-  '/secure-payments': App
+  '/secure-payments': App,
+  '/sitemap': App,
+  '/apps/:slug': App
 };
 
 // Mount the app when DOM is ready

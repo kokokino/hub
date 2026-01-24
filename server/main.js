@@ -18,6 +18,7 @@ import './webhooks/lemonSqueezy.js';
 import './publications.js';
 import './migrations/0_steps.js';
 import './api/index.js';
+import './seo/index.js';
 import { isVerifiedUser } from '/imports/utils.js';
 
 // Configure migrations

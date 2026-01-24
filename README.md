@@ -4,7 +4,7 @@ A central hub for account management, billing, and Single Sign‑On (SSO) for al
 
 ## Overview
 
-The Hub is the central application users see when visiting `http://kokokino.com`. It provides:
+The Hub is the central application users see when visiting [kokokino.com](https://www.kokokino.com/). It provides:
 
 - User account management
 - Billing and subscription handling via Lemon Squeezy

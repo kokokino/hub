@@ -5,11 +5,11 @@ import { Products } from '/lib/collections/products';
 import { Apps } from '/lib/collections/apps';
 
 /**
- * Find a user's subscription for a specific product
+ * Find a user's subscription for a specific product by slug
  */
-function findSubscriptionForProduct(user, productId) {
+function findSubscriptionForProduct(user, productSlug) {
   const subscriptions = user?.lemonSqueezy?.subscriptions || [];
-  return subscriptions.find(sub => sub.kokokinoProductId === productId);
+  return subscriptions.find(sub => sub.kokokinoProductSlug === productSlug);
 }
 
 /**
@@ -27,21 +27,21 @@ function findAnyActiveSubscription(user) {
 
 Meteor.methods({
   // Get user's subscription status for a specific product (or any active subscription)
-  async 'subscriptions.getStatus'(productId) {
-    check(productId, Match.OneOf(String, null, undefined));
-    
+  async 'subscriptions.getStatus'(productSlug) {
+    check(productSlug, Match.OneOf(String, null, undefined));
+
     if (!this.userId) {
       throw new Meteor.Error('not-authorized', 'You must be logged in');
     }
-    
+
     const user = await Meteor.users.findOneAsync(this.userId);
     const emailVerified = isVerifiedUser(user);
-    
-    // If productId is provided, find subscription for that product
+
+    // If productSlug is provided, find subscription for that product
     // Otherwise, find any active subscription
     let subscription;
-    if (productId) {
-      subscription = findSubscriptionForProduct(user, productId);
+    if (productSlug) {
+      subscription = findSubscriptionForProduct(user, productSlug);
     } else {
       subscription = findAnyActiveSubscription(user);
     }
@@ -73,7 +73,7 @@ Meteor.methods({
       isValid: isSubscriptionValid,
       renewsAt: subscription.renewsAt,
       endsAt: subscription.endsAt,
-      kokokinoProductId: subscription.kokokinoProductId
+      kokokinoProductSlug: subscription.kokokinoProductSlug
     };
   },
   
@@ -90,7 +90,7 @@ Meteor.methods({
     return subscriptions.map(sub => {
       const validUntilDate = sub.validUntil ? new Date(sub.validUntil) : null;
       const isValid = validUntilDate && validUntilDate > now;
-      
+
       return {
         status: sub.status,
         planName: sub.productName,
@@ -99,46 +99,46 @@ Meteor.methods({
         isValid: isValid,
         renewsAt: sub.renewsAt,
         endsAt: sub.endsAt,
-        kokokinoProductId: sub.kokokinoProductId
+        kokokinoProductSlug: sub.kokokinoProductSlug
       };
     });
   },
   
   // Create checkout session (redirects to Lemon Squeezy)
-  async 'subscriptions.createCheckout'(productId) {
-    check(productId, String);
-    
-    if (!productId) {
-      throw new Meteor.Error('no-checkout', 'Must have a product id to checkout');
+  async 'subscriptions.createCheckout'(productSlug) {
+    check(productSlug, String);
+
+    if (!productSlug) {
+      throw new Meteor.Error('no-checkout', 'Must have a product slug to checkout');
     }
 
     if (!this.userId) {
       throw new Meteor.Error('not-authorized', 'You must be logged in');
     }
-    
+
     const user = await Meteor.users.findOneAsync(this.userId);
     const email = user?.emails?.[0]?.address;
-    
+
     if (!email) {
       throw new Meteor.Error('no-email', 'User has no email address');
     }
-    
+
     // Check if email is verified using the utility function
     if (!isVerifiedUser(user)) {
       throw new Meteor.Error('email-not-verified', 'Please verify your email address before subscribing');
     }
-    
+
     // Check if user already has an active subscription for this product
-    const existingSubscription = findSubscriptionForProduct(user, productId);
+    const existingSubscription = findSubscriptionForProduct(user, productSlug);
     if (existingSubscription) {
       const validUntil = existingSubscription.validUntil ? new Date(existingSubscription.validUntil) : null;
       if (validUntil && validUntil > new Date()) {
         throw new Meteor.Error('already-subscribed', 'You already have an active subscription for this product');
       }
     }
-    
-    // Look up product in our Products collection
-    const product = await Products.findOneAsync(productId);
+
+    // Look up product in our Products collection by slug
+    const product = await Products.findOneAsync({ slug: productSlug });
     if (!product) {
       throw new Meteor.Error('product-not-found', 'Product not found');
     } else if (!product.lemonSqueezyBuyLinkId) {
@@ -189,18 +189,18 @@ Meteor.methods({
     if (!this.userId) {
       throw new Meteor.Error('not-authorized', 'You must be logged in');
     }
-    
+
     const user = await Meteor.users.findOneAsync(this.userId);
     const subscriptions = user?.lemonSqueezy?.subscriptions || [];
     const now = new Date();
-    
+
     // Get product details for each subscription
     const results = [];
     for (const sub of subscriptions) {
-      const product = await Products.findOneAsync(sub.kokokinoProductId);
+      const product = await Products.findOneAsync({ slug: sub.kokokinoProductSlug });
       const validUntilDate = sub.validUntil ? new Date(sub.validUntil) : null;
       const isValid = validUntilDate && validUntilDate > now;
-      
+
       results.push({
         subscription: {
           status: sub.status,
@@ -213,7 +213,7 @@ Meteor.methods({
         product: product
       });
     }
-    
+
     return results;
   }
 });

@@ -39,12 +39,12 @@ const ProductList = {
       return m('p', 'No products available.');
     }
     
-    return this.products.map(product => 
+    return this.products.map(product =>
       m('article', { key: product._id }, [
         m('h2', product.name),
         m('p', product.description),
         m('p', `Price: $${product.pricePerMonthUSD.toFixed(2)}/month`),
-        m('p', ['Currently: ', m(SubscriberCount, { productId: product._id })]),
+        m('p', ['Currently: ', m(SubscriberCount, { productSlug: product.slug })]),
         m(SubscriptionButton, {
           productId: product._id,
           label: 'Subscribe',

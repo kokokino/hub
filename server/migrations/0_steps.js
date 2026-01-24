@@ -4,3 +4,4 @@ import './3_ssoNonces_indexes.js';
 import './4_add_github_urls.js';
 import './5_update_app_descriptions.js';
 import './6_add_app_slugs.js';
+import './7_add_product_slugs.js';

@@ -59,11 +59,11 @@ const AppsList = {
   /**
    * Check if user has an active subscription for a specific product
    */
-  hasActiveSubscription(productId) {
-    if (!productId) return false;
+  hasActiveSubscription(productSlug) {
+    if (!productSlug) return false;
     const now = new Date();
-    return this.userSubscriptions.some(sub => 
-      sub.kokokinoProductId === productId &&
+    return this.userSubscriptions.some(sub =>
+      sub.kokokinoProductSlug === productSlug &&
       sub.status === 'active' &&
       sub.validUntil &&
       new Date(sub.validUntil) > now
@@ -80,19 +80,20 @@ const AppsList = {
   canLaunchApp(app) {
     // Must be logged in
     if (!this.user) return false;
-    
+
     // Must have base subscription
-    if (!this.baseProduct || !this.hasActiveSubscription(this.baseProduct._id)) {
+    if (!this.baseProduct || !this.hasActiveSubscription(this.baseProduct.slug)) {
       return false;
     }
-    
+
     // If app belongs to a different product, must have that subscription too
     if (app.productId !== this.baseProduct._id) {
-      if (!this.hasActiveSubscription(app.productId)) {
+      const appProduct = this.products[app.productId];
+      if (!appProduct || !this.hasActiveSubscription(appProduct.slug)) {
         return false;
       }
     }
-    
+
     return true;
   },
   
@@ -114,20 +115,20 @@ const AppsList = {
    */
   getMissingRequirements(app) {
     const missing = [];
-    
+
     // Check base subscription
-    if (this.baseProduct && !this.hasActiveSubscription(this.baseProduct._id)) {
+    if (this.baseProduct && !this.hasActiveSubscription(this.baseProduct.slug)) {
       missing.push(this.baseProduct.name);
     }
-    
+
     // Check app's product subscription (if different from base)
-    if (app.productId !== this.baseProduct?._id && !this.hasActiveSubscription(app.productId)) {
+    if (app.productId !== this.baseProduct?._id) {
       const product = this.products[app.productId];
-      if (product) {
+      if (product && !this.hasActiveSubscription(product.slug)) {
         missing.push(product.name);
       }
     }
-    
+
     return missing;
   },
   

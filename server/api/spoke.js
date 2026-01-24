@@ -52,14 +52,14 @@ export async function handleValidateToken(body, spokeId) {
  * Checks if a user has active subscriptions for specific products
  */
 export async function handleCheckSubscription(body) {
-  const { userId, requiredProductIds } = body;
+  const { userId, requiredProductSlugs } = body;
 
   if (!userId) {
     return { hasAccess: false, error: 'missing_user_id' };
   }
 
-  if (!requiredProductIds || !Array.isArray(requiredProductIds)) {
-    return { hasAccess: false, error: 'missing_required_product_ids' };
+  if (!requiredProductSlugs || !Array.isArray(requiredProductSlugs)) {
+    return { hasAccess: false, error: 'missing_required_product_slugs' };
   }
 
   const user = await Meteor.users.findOneAsync(userId);
@@ -68,11 +68,11 @@ export async function handleCheckSubscription(body) {
   }
 
   const subscriptions = await getActiveSubscriptions(user);
-  const activeProductIds = subscriptions.map(sub => sub.productId);
+  const activeProductSlugs = subscriptions.map(sub => sub.productSlug);
 
   // Check if user has all required subscriptions
-  const hasAccess = requiredProductIds.every(productId => 
-    activeProductIds.includes(productId)
+  const hasAccess = requiredProductSlugs.every(productSlug =>
+    activeProductSlugs.includes(productSlug)
   );
 
   return {
@@ -125,11 +125,11 @@ async function getActiveSubscriptions(user) {
     if (sub.status !== 'active') continue;
     if (!sub.validUntil || new Date(sub.validUntil) <= now) continue;
 
-    // Get product details
-    const product = await Products.findOneAsync(sub.kokokinoProductId);
-    
+    // Get product details by slug
+    const product = await Products.findOneAsync({ slug: sub.kokokinoProductSlug });
+
     activeSubscriptions.push({
-      productId: sub.kokokinoProductId,
+      productSlug: sub.kokokinoProductSlug,
       productName: product?.name || 'Unknown Product',
       status: sub.status,
       validUntil: sub.validUntil

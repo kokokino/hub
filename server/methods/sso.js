@@ -57,8 +57,8 @@ Meteor.methods({
     
     // Check base subscription
     if (baseProduct) {
-      const hasBase = userSubscriptions.some(sub => 
-        sub.kokokinoProductId === baseProduct._id &&
+      const hasBase = userSubscriptions.some(sub =>
+        sub.kokokinoProductSlug === baseProduct.slug &&
         sub.status === 'active' &&
         sub.validUntil &&
         new Date(sub.validUntil) > now
@@ -71,8 +71,9 @@ Meteor.methods({
 
     // Check app-specific subscription if different from base
     if (app.productId && app.productId !== baseProduct?._id) {
+      const appProduct = await Products.findOneAsync(app.productId);
       const hasAppSub = userSubscriptions.some(sub =>
-        sub.kokokinoProductId === app.productId &&
+        sub.kokokinoProductSlug === appProduct?.slug &&
         sub.status === 'active' &&
         sub.validUntil &&
         new Date(sub.validUntil) > now

@@ -49,11 +49,11 @@ const AppDetailPage = {
     }
   },
 
-  hasActiveSubscription(productId) {
-    if (!productId) return false;
+  hasActiveSubscription(productSlug) {
+    if (!productSlug) return false;
     const now = new Date();
     return this.userSubscriptions.some(sub =>
-      sub.kokokinoProductId === productId &&
+      sub.kokokinoProductSlug === productSlug &&
       sub.status === 'active' &&
       sub.validUntil &&
       new Date(sub.validUntil) > now
@@ -62,11 +62,11 @@ const AppDetailPage = {
 
   canLaunchApp() {
     if (!this.user || !this.app) return false;
-    if (!this.baseProduct || !this.hasActiveSubscription(this.baseProduct._id)) {
+    if (!this.baseProduct || !this.hasActiveSubscription(this.baseProduct.slug)) {
       return false;
     }
     if (this.app.productId !== this.baseProduct._id) {
-      if (!this.hasActiveSubscription(this.app.productId)) {
+      if (!this.product || !this.hasActiveSubscription(this.product.slug)) {
         return false;
       }
     }
@@ -84,12 +84,12 @@ const AppDetailPage = {
     if (!this.app) return [];
     const missing = [];
 
-    if (this.baseProduct && !this.hasActiveSubscription(this.baseProduct._id)) {
+    if (this.baseProduct && !this.hasActiveSubscription(this.baseProduct.slug)) {
       missing.push(this.baseProduct.name);
     }
 
-    if (this.app.productId !== this.baseProduct?._id && !this.hasActiveSubscription(this.app.productId)) {
-      if (this.product) {
+    if (this.app.productId !== this.baseProduct?._id) {
+      if (this.product && !this.hasActiveSubscription(this.product.slug)) {
         missing.push(this.product.name);
       }
     }

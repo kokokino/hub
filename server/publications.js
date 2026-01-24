@@ -17,20 +17,20 @@ Meteor.publish('currentUser', function() {
   });
 });
 
-Meteor.publish('activeSubscriberCount', async function(productId) {
-  check(productId, Match.OneOf(String, null, undefined));
-  
+Meteor.publish('activeSubscriberCount', async function(productSlug) {
+  check(productSlug, Match.OneOf(String, null, undefined));
+
   const self = this;
   let count = 0;
   let initializing = true;
-  
-  // Build query based on whether productId is provided
+
+  // Build query based on whether productSlug is provided
   let query;
-  if (productId) {
+  if (productSlug) {
     query = {
       'lemonSqueezy.subscriptions': {
         $elemMatch: {
-          kokokinoProductId: productId,
+          kokokinoProductSlug: productSlug,
           status: 'active',
           validUntil: { $gt: new Date() }
         }
@@ -47,8 +47,8 @@ Meteor.publish('activeSubscriberCount', async function(productId) {
     };
   }
   
-  // Use productId or 'all' as the document ID
-  const countId = productId || 'all';
+  // Use productSlug or 'all' as the document ID
+  const countId = productSlug || 'all';
   
   // Observe changes to the active subscribers cursor
   const handle = await Meteor.users.find(query, { fields: { _id: 1 } }).observeChangesAsync({
@@ -85,6 +85,7 @@ Meteor.publish('products', function() {
     sort: { sortOrder: 1 },
     fields: {
       name: 1,
+      slug: 1,
       description: 1,
       sortOrder: 1,
       pricePerMonthUSD: 1,

@@ -11,23 +11,23 @@ const SubscriberCount = {
     this.count = null;
     this.ready = false;
     this.handle = null;
-    
-    // Get productId from attrs, or null for overall count
-    const productId = vnode.attrs.productId || null;
-    
+
+    // Get productSlug from attrs, or null for overall count
+    const productSlug = vnode.attrs.productSlug || null;
+
     // Subscribe and track the count reactively
     this.computation = Tracker.autorun(() => {
-      this.handle = Meteor.subscribe('activeSubscriberCount', productId);
+      this.handle = Meteor.subscribe('activeSubscriberCount', productSlug);
       this.ready = this.handle.ready();
-      
+
       if (this.ready) {
         // The publication publishes to 'subscriberCounts' collection
-        // with _id based on productId or 'all'
-        const countId = productId || 'all';
+        // with _id based on productSlug or 'all'
+        const countId = productSlug || 'all';
         const doc = SubscriberCounts.findOne(countId);
         this.count = doc ? doc.count : 0;
       }
-      
+
       m.redraw();
     });
   },

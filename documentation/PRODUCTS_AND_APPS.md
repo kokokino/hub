@@ -8,26 +8,27 @@ We're transitioning from a single-subscription model to a multi-product system w
                                                                                                                                                             
 ## Collections Design                                                                                                                                       
                                                                                                                                                             
-### 1. Products Collection (`lib/collections/products.js`)                                                                                                  
-```javascript                                                                                                                                               
-// Schema for Products collection                                                                                                                           
-{                                                                                                                                                           
-  _id: String,           // Meteor-generated ID                                                                                                             
-  name: String,          // Display name (e.g., "Base Monthly")                                                                                             
-  description: String,    // Detailed description                                                                                                           
-  sortOrder: Number,     // Display order (lower = first)                                                                                                   
+### 1. Products Collection (`lib/collections/products.js`)
+```javascript
+// Schema for Products collection
+{
+  _id: String,           // Meteor-generated ID
+  name: String,          // Display name (e.g., "Base Monthly")
+  slug: String,          // URL-friendly name (e.g., "base-monthly") - unique, used for cross-app references
+  description: String,    // Detailed description
+  sortOrder: Number,     // Display order (lower = first)
   lemonSqueezyProductId: String,     // Lemon Squeezy product ID (e.g., "739029")
-  lemonSqueezyBuyLinkId: String,     // Lemon Squeezy checkout link UUID                                                                                   
-  pricePerMonthUSD: Number,  // Decimal price (e.g., 2.00)                                                                                                  
-  gitHubURL: String,     // Optional GitHub repo link                                                                                                       
-  paymentInstructions: String, // Payment details for owners                                                                                                
-  isApproved: Boolean,   // Default: false                                                                                                                  
-  createdAt: Date,                                                                                                                                          
-  updatedAt: Date,                                                                                                                                          
-  createdBy: String,     // User ID who created this                                                                                                        
-  isRequired: Boolean,     // Is this product required? (Base subscription)                                                                                   
-  isActive: Boolean        // Soft delete flag                                                                                                                
-}                                                                                                                                                           
+  lemonSqueezyBuyLinkId: String,     // Lemon Squeezy checkout link UUID
+  pricePerMonthUSD: Number,  // Decimal price (e.g., 2.00)
+  gitHubURL: String,     // Optional GitHub repo link
+  paymentInstructions: String, // Payment details for owners
+  isApproved: Boolean,   // Default: false
+  createdAt: Date,
+  updatedAt: Date,
+  createdBy: String,     // User ID who created this
+  isRequired: Boolean,     // Is this product required? (Base subscription)
+  isActive: Boolean        // Soft delete flag
+}
 ```
 
 ### 2. Apps Collection (`lib/collections/apps.js`)                                                                                                                
@@ -90,7 +91,7 @@ user.lemonSqueezy: {
   lastWebhookReceived: Date,       // Timestamp of last webhook processed
   subscriptions: [{
     subscriptionId: String,        // Lemon Squeezy subscription ID
-    kokokinoProductId: String,     // References our Products._id (KEY IDENTIFIER)
+    kokokinoProductSlug: String,   // References our Products.slug (KEY IDENTIFIER)
     lemonSqueezyProductId: String, // Lemon Squeezy product ID
     lemonSqueezyVariantId: String, // Lemon Squeezy variant ID
     customerId: String,            // Lemon Squeezy customer ID
@@ -114,7 +115,7 @@ user.lemonSqueezy: {
 
 ### Key Design Decisions
 
-1. **One subscription per product per user**: The `kokokinoProductId` is the key identifier. When a webhook arrives, we upsert based on this field.
+1. **One subscription per product per user**: The `kokokinoProductSlug` is the key identifier. When a webhook arrives, we upsert based on this field. Using slug instead of `_id` ensures the same identifier works across dev and production environments.
 
 2. **Subscriptions are removed on expiry**: When a subscription expires, it's removed from the array entirely.
 
@@ -155,11 +156,11 @@ This ensures users can only get access to the product they actually paid for.
 To find users with active subscriptions to a specific product:
 
 ```javascript
-// Find users with active subscription to a specific product
+// Find users with active subscription to a specific product (by slug)
 const query = {
   'lemonSqueezy.subscriptions': {
     $elemMatch: {
-      kokokinoProductId: productId,
+      kokokinoProductSlug: productSlug,  // e.g., "base-monthly"
       status: 'active',
       validUntil: { $gt: new Date() }
     }
@@ -189,15 +190,17 @@ When Lemon Squeezy sends a webhook:
    ```javascript
    const lemonSqueezyProductId = String(attributes.product_id);
    const kokokinoProduct = await Products.findOneAsync({ lemonSqueezyProductId });
+   const kokokinoProductSlug = kokokinoProduct.slug;
    ```
 
 4. **Build subscription data** from webhook attributes including:
+   - `kokokinoProductSlug` (stable identifier for cross-app references)
    - Lemon Squeezy IDs (subscription, product, variant, customer)
    - Status and dates (validUntil, renewsAt, endsAt, etc.)
    - Customer portal URL
 
 5. **Upsert subscription** in user's `lemonSqueezy.subscriptions` array:
-   - Key on `kokokinoProductId`
+   - Key on `kokokinoProductSlug`
    - Update existing or push new subscription
 
 6. **Handle expiry**: On `subscription_expired` event, remove the subscription from the array.
@@ -285,7 +288,7 @@ Migrations.add({
 - [x] Set up migration system with quave:migrations
 - [x] Run initial migration for base product and Backlog Beacon app
 - [x] Update webhooks to use new `lemonSqueezy.subscriptions` array structure
-- [x] Look up kokokinoProductId from lemonSqueezyProductId in webhook (secure approach)
+- [x] Look up kokokinoProductSlug from lemonSqueezyProductId in webhook (secure approach)
 - [x] Update `subscriptions.getStatus` method to accept productId
 - [x] Update `subscriptions.createCheckout` to use simplified URL (no kokokino_product_id)
 - [x] Update `activeSubscriberCount` publication to accept productId
@@ -304,14 +307,14 @@ Migrations.add({
 
 ## Server Methods
 
-### `subscriptions.getStatus(productId)`
-Get subscription status for a specific product (or any active subscription if productId is null).
+### `subscriptions.getStatus(productSlug)`
+Get subscription status for a specific product (or any active subscription if productSlug is null).
 
 ### `subscriptions.getAll()`
 Get all subscriptions for the current user.
 
-### `subscriptions.createCheckout(productId)`
-Create a checkout URL for a specific product.
+### `subscriptions.createCheckout(productSlug)`
+Create a checkout URL for a specific product (identified by slug).
 
 ### `subscriptions.getUserProducts()`
 Get user's subscriptions with full product details.
@@ -330,8 +333,8 @@ Get all approved, active apps for a specific product.
 ### `currentUser`
 Publishes user data including `lemonSqueezy.customerId` and `lemonSqueezy.subscriptions`.
 
-### `activeSubscriberCount(productId)`
-Publishes count of active subscribers for a specific product (or all products if productId is null).
+### `activeSubscriberCount(productSlug)`
+Publishes count of active subscribers for a specific product (or all products if productSlug is null).
 
 ### `products`
 Publishes all approved, active products.
@@ -372,7 +375,7 @@ Handles subscription flow for a specific product:
 2. **Method Security**: Check user permissions for admin methods                                                                                                
 3. **Ownership Security**: Validate ownership assignments                                                                                                       
 4. **Webhook Security**: Verify signature using HMAC-SHA256
-5. **Product Lookup Security**: Always look up kokokinoProductId from lemonSqueezyProductId in webhook payload, never trust user-provided custom data for product identification
+5. **Product Lookup Security**: Always look up kokokinoProductSlug from lemonSqueezyProductId in webhook payload, never trust user-provided custom data for product identification
 
 ## Future Enhancements                                                                                                                                         
 
@@ -383,4 +386,4 @@ Handles subscription flow for a specific product:
 5. Analytics: Track product popularity and revenue                                                                                                          
 
 ---
-Last Updated: 2026-01-09
+Last Updated: 2026-01-24

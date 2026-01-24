@@ -9,25 +9,44 @@ const SubscriptionButton = {
     this.loading = false;
     this.subscription = null;
     this.userId = null; // Track user ID instead of full user object
+    this.productSlug = null; // Track product slug to detect when it becomes available
     this.product = null;
-    
+
     // Subscribe to products publication
     this.productsHandle = Meteor.subscribe('products');
-    
-    // Set up Tracker to reactively update when user changes
+
+    // Set up Tracker to reactively update when user or product changes
     this.computation = Tracker.autorun(() => {
       const currentUser = Meteor.user();
       const currentUserId = currentUser ? currentUser._id : null;
       const previousUserId = this.userId;
+      const previousProductSlug = this.productSlug;
       const { productId } = vnode.attrs;
-      
+
+      // Fetch product details first (needed for getting slug)
+      let currentProductSlug = null;
+      if (productId && this.productsHandle.ready()) {
+        const product = Products.findOne(productId);
+        if (product) {
+          this.product = product;
+          currentProductSlug = product.slug;
+        } else {
+          this.product = null;
+        }
+      }
+
       // Check if user ID changed (login/logout or different user)
-      if (currentUserId !== previousUserId) {
+      // OR if product slug just became available
+      const userChanged = currentUserId !== previousUserId;
+      const productBecameAvailable = currentProductSlug && currentProductSlug !== previousProductSlug;
+
+      if (userChanged || productBecameAvailable) {
         this.userId = currentUserId;
-        
-        if (currentUser && productId) {
-          // User logged in or changed - load subscription status for this product
-          Meteor.call('subscriptions.getStatus', productId, (error, result) => {
+        this.productSlug = currentProductSlug;
+
+        if (currentUser && currentProductSlug) {
+          // User logged in or product became available - load subscription status
+          Meteor.call('subscriptions.getStatus', currentProductSlug, (error, result) => {
             if (!error) {
               this.subscription = result;
             } else {
@@ -35,21 +54,11 @@ const SubscriptionButton = {
             }
             m.redraw();
           });
-        } else {
+        } else if (!currentUser) {
           // User logged out - clear subscription data
           this.subscription = null;
         }
         m.redraw();
-      }
-      
-      // Fetch product details
-      if (productId && this.productsHandle.ready()) {
-        const product = Products.findOne(productId);
-        if (product) {
-          this.product = product;
-        } else {
-          this.product = null;
-        }
       }
     });
   },
@@ -140,13 +149,13 @@ const SubscriptionButton = {
     const buttonLabel = this.product ? `Subscribe to ${this.product.name}` : label;
     return m('button', {
       class: `button button-${variant}`,
-      disabled: this.loading || !this.product,
+      disabled: this.loading || !this.product?.slug,
       onclick: () => {
-        if (!productId) return;
+        if (!this.product?.slug) return;
         this.loading = true;
         m.redraw();
-        
-        Meteor.call('subscriptions.createCheckout', productId, (error, result) => {
+
+        Meteor.call('subscriptions.createCheckout', this.product.slug, (error, result) => {
           if (error) {
             console.error('Checkout error:', error);
             alert('Failed to start checkout. Please try again.');

@@ -89,7 +89,7 @@ export async function generateSsoToken(userId, appId, appUrl) {
       return new Date(sub.validUntil) > new Date();
     })
     .map(sub => ({
-      productId: sub.kokokinoProductId,
+      productSlug: sub.kokokinoProductSlug,
       status: sub.status,
       validUntil: sub.validUntil
     }));

@@ -13,6 +13,7 @@ const AppsList = {
     this.user = null;
     this.userSubscriptions = [];
     this.launching = null; // Track which app is being launched
+    this.expandedDescriptions = {}; // Track expanded state per app card
     
     this.autorun = Tracker.autorun(() => {
       const appsReady = Meteor.subscribe('apps').ready();
@@ -202,16 +203,24 @@ const AppsList = {
 
       //console.log(`${app._id} hasSso: ${hasSso}`);
       
+      const isExpanded = this.expandedDescriptions[app._id];
+      const descriptionClass = isExpanded ? 'app-description' : 'app-description truncated';
+
       return m('div', { key: app._id }, [
-        m('article', [
+        m('article.app-card', [
           m('h3', app.name),
-          m('p', app.description),
           canLaunch
             ? m('button', {
                 onclick: () => this.handleLaunch(app),
                 disabled: isLaunching || !hasSso
               }, isLaunching ? 'Launching...' : (hasSso ? 'Launch' : 'Coming Soon'))
             : m('p', m('small', m('em', launchInstructions))),
+          m('p', { class: descriptionClass }, app.description),
+          m('span.read-more-link', {
+            onclick: () => {
+              this.expandedDescriptions[app._id] = !isExpanded;
+            }
+          }, isExpanded ? 'Read less' : 'Read more'),
           m('footer', m('small', [
             `Included in ${productName}`,
             app.gitHubUrl ? [' · ', m('a', {
@@ -226,9 +235,9 @@ const AppsList = {
     
     // Add "Coming Soon" card at the end
     const comingSoonCard = m('div', { key: 'coming-soon' }, [
-      m('article', [
+      m('article.app-card', [
         m('h3', 'Coming Soon'),
-        m('p', 'More games and apps from our community'),
+        m('p.app-description', 'More games and apps from our community'),
         m('footer', m('small', 'Various subscription levels'))
       ])
     ]);

@@ -16,12 +16,57 @@ header nav {
   border-bottom: 2px solid var(--primary);
 }
 
-/* Grid layout for apps */
+/* Grid layout for apps - mobile first */
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: 1fr;
   gap: 1rem;
   margin: 2rem 0;
+}
+
+@media (min-width: 480px) {
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 768px) {
+  .grid {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  }
+}
+
+/* App card flexbox layout for equal heights */
+.app-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.app-description {
+  flex-grow: 1;
+}
+
+.app-description.truncated {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.read-more-link {
+  font-size: 0.875rem;
+  color: var(--primary);
+  cursor: pointer;
+  margin-top: 0.25rem;
+}
+
+.read-more-link:hover {
+  text-decoration: underline;
+}
+
+.app-card footer {
+  margin-top: auto;
 }
 
 /* Article cards */

@@ -110,6 +110,7 @@ Meteor.publish('apps', function() {
       productId: 1,
       spokeId: 1,
       ageRating: 1,
+      gitHubUrl: 1,
       isActive: 1,
       isApproved: 1
     }

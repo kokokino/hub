@@ -212,7 +212,14 @@ const AppsList = {
                 disabled: isLaunching || !hasSso
               }, isLaunching ? 'Launching...' : (hasSso ? 'Launch' : 'Coming Soon'))
             : m('p', m('small', m('em', launchInstructions))),
-          m('footer', m('small', `Included in ${productName}`))
+          m('footer', m('small', [
+            `Included in ${productName}`,
+            app.gitHubUrl ? [' · ', m('a', {
+              href: app.gitHubUrl,
+              target: '_blank',
+              rel: 'noopener noreferrer'
+            }, 'GitHub')] : null
+          ]))
         ])
       ]);
     });

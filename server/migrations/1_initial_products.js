@@ -10,7 +10,19 @@ Migrations.add({
   name: 'Create initial base product and apps',
   up: async function() {
     console.log('=== RUNNING MIGRATION 1: Create initial base product and apps ===');
-    
+
+    // Read Lemon Squeezy configuration from settings
+    const lsBaseProductId = Meteor.settings?.private?.lemonSqueezy?.LS_BASE_PRODUCT_ID;
+    const lsBuyLinkId = Meteor.settings?.private?.lemonSqueezy?.LS_BASE_BUY_LINK_ID;
+
+    // Validate configuration exists and is reasonable
+    if (!lsBaseProductId || lsBaseProductId.length <= 3) {
+      throw new Error('Migration 1 failed: LS_BASE_PRODUCT_ID is not set or is too short in Meteor.settings.private.lemonSqueezy');
+    }
+    if (!lsBuyLinkId || lsBuyLinkId.length <= 3) {
+      throw new Error('Migration 1 failed: LS_BASE_BUY_LINK_ID is not set or is too short in Meteor.settings.private.lemonSqueezy');
+    }
+
     // Check if base product already exists
     const existingProduct = await Products.findOneAsync({ name: 'Base Monthly' });
     if (existingProduct) {
@@ -24,8 +36,8 @@ Migrations.add({
       description: 'Access to fundamental apps and games including Backlog Beacon',
       sortOrder: 0,
       pricePerMonthUSD: 2.00,
-      lemonSqueezyProductId: process.env.LS_BASE_PRODUCT_ID || '739029',
-      lemonSqueezyBuyLinkId: process.env.LS_BASE_BUY_LINK_ID || '53df2db1-9867-460f-86b4-fc317238b88a', 
+      lemonSqueezyProductId: lsBaseProductId,
+      lemonSqueezyBuyLinkId: lsBuyLinkId, 
       isApproved: true,
       isRequired: true,
       isActive: true,

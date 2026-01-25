@@ -8,7 +8,9 @@
       "storeId": "your-store-id",
       "storeName": "kokokino",
       "apiKey": "your-api-key",
-      "lemonSqueezyWebhookSecret": "your-webhook-secret"
+      "lemonSqueezyWebhookSecret": "your-webhook-secret",
+      "LS_BASE_PRODUCT_ID": "ABC",
+      "LS_BASE_BUY_LINK_ID": "XYZ"
     },
     "spokeApiKeys": {
       "spoke_app_skeleton": "generate-a-random-32-char-string-here",
@@ -16,11 +18,11 @@
     },
     "spokes": {
       "spoke_app_skeleton": {
-        "url": "http://localhost:3001",
+        "url": "http://localhost:3010",
         "name": "Spoke App Skeleton"
       },
       "backlog_beacon": {
-        "url": "http://localhost:3002",
+        "url": "http://localhost:3020",
         "name": "Backlog Beacon"
       }
     }

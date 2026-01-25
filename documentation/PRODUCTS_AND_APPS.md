@@ -231,52 +231,77 @@ meteor add quave:migrations
 # https://packosphere.com/quave/migrations
 ```
 
-### 2. Initial Migration (`server/migrations/1_initial_products.js`)                                                                                              
+### 2. Initial Migration (`server/migrations/1_initial_products.js`)
 
-```javascript                                                                                                                                                            
-import { Migrations } from 'meteor/quave:migrations';                                                                                                   
-import { Products } from '/lib/collections/products';                                                                                                           
-import { Apps } from '/lib/collections/apps';                                                                                                                   
-                                                                                                                                                            
-Migrations.add({                                                                                                                                            
-  version: 1,                                                                                                                                               
-  name: 'Create initial base product and apps',                                                                                                             
-  up: async function() {                                                                                                                                                    
-    // Create Base Monthly Product                                                                                                                          
-    const baseProductId = await Products.insertAsync({                                                                                                                 
-      name: 'Base Monthly',                                                                                                                                 
-      description: 'Access to fundamental apps and games including Backlog Beacon',                                                                         
-      sortOrder: 0,                                                                                                                                         
+**Note:** The Lemon Squeezy product IDs must be configured in `settings.json` under `private.lemonSqueezy`:
+
+```json
+{
+  "private": {
+    "lemonSqueezy": {
+      "LS_BASE_PRODUCT_ID": "your-product-id",
+      "LS_BASE_BUY_LINK_ID": "your-buy-link-uuid"
+    }
+  }
+}
+```
+
+```javascript
+import { Migrations } from 'meteor/quave:migrations';
+import { Products } from '/lib/collections/products';
+import { Apps } from '/lib/collections/apps';
+
+Migrations.add({
+  version: 1,
+  name: 'Create initial base product and apps',
+  up: async function() {
+    // Read Lemon Squeezy configuration from settings
+    const lsBaseProductId = Meteor.settings?.private?.lemonSqueezy?.LS_BASE_PRODUCT_ID;
+    const lsBuyLinkId = Meteor.settings?.private?.lemonSqueezy?.LS_BASE_BUY_LINK_ID;
+
+    // Validate configuration exists and is reasonable
+    if (!lsBaseProductId || lsBaseProductId.length <= 3) {
+      throw new Error('Migration 1 failed: LS_BASE_PRODUCT_ID is not set or is too short in Meteor.settings.private.lemonSqueezy');
+    }
+    if (!lsBuyLinkId || lsBuyLinkId.length <= 3) {
+      throw new Error('Migration 1 failed: LS_BASE_BUY_LINK_ID is not set or is too short in Meteor.settings.private.lemonSqueezy');
+    }
+
+    // Create Base Monthly Product
+    const baseProductId = await Products.insertAsync({
+      name: 'Base Monthly',
+      description: 'Access to fundamental apps and games including Backlog Beacon',
+      sortOrder: 0,
       pricePerMonthUSD: 2.00,
-      lemonSqueezyProductId: '739029',
-      lemonSqueezyBuyLinkId: '53df2db1-9867-460f-86b4-fc317238b88a', 
-      isApproved: true,                                                                                                                                     
-      isRequired: true,                                                                                                                                       
-      isActive: true,                                                                                                                                         
-      createdAt: new Date(),                                                                                                                                
-      updatedAt: new Date(),                                                                                                                                
-      createdBy: 'system'                                                                                                                                   
-    });                                                                                                                                                     
-                                                                                                                                                            
-    // Create Backlog Beacon App                                                                                                                            
-    await Apps.insertAsync({                                                                                                                                           
-      name: 'Backlog Beacon',                                                                                                                               
-      description: 'Track your personal video game collection',                                                                                             
-      productId: baseProductId,                                                                                                                             
-      ageRating: 'E',                                                                                                                                       
-      isApproved: true,                                                                                                                                     
-      isActive: true,                                                                                                                                         
-      createdAt: new Date(),                                                                                                                                
-      updatedAt: new Date(),                                                                                                                                
-      createdBy: 'system'                                                                                                                                   
-    });                                                                                                                                                     
-  },                                                                                                                                                        
-  down: async function() {                                                                                                                                  
-    // Rollback if needed                                                                                                                                   
-    await Products.removeAsync({});                                                                                                                         
-    await Apps.removeAsync({});                                                                                                                             
-  }                                                                                                                                                         
-});                                                                                                                                                         
+      lemonSqueezyProductId: lsBaseProductId,
+      lemonSqueezyBuyLinkId: lsBuyLinkId,
+      isApproved: true,
+      isRequired: true,
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      createdBy: 'system'
+    });
+
+    // Create Backlog Beacon App
+    await Apps.insertAsync({
+      name: 'Backlog Beacon',
+      description: 'Track your personal video game collection',
+      productId: baseProductId,
+      ageRating: 'E',
+      isApproved: true,
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      createdBy: 'system'
+    });
+  },
+  down: async function() {
+    // Rollback if needed
+    await Products.removeAsync({});
+    await Apps.removeAsync({});
+  }
+});
 ```
 
 ## Implementation Status

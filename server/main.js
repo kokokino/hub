@@ -21,6 +21,8 @@ import './api/index.js';
 import './seo/index.js';
 import { isVerifiedUser } from '/imports/utils.js';
 
+// console.log('MONGO_URL:', process.env.MONGO_URL ? `MONGO URL SET: ${process.env.MONGO_URL}` : 'MONGO URL NOT SET');
+
 // Configure migrations
 Migrations.config({
   // Log job run details to console

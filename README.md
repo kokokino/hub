@@ -123,6 +123,29 @@ meteor --settings settings.development.json
 # Backlog Beacon: port 3002
 ```
 
+### Creating a Development User
+
+For local development, create a pre-configured user with a verified email and active subscription. This bypasses Lemon Squeezy webhooks and email verification.
+
+**Run the setup script:**
+
+```bash
+# With meteor running in another terminal:
+meteor shell < private/scripts/createDevUser.js
+```
+
+**Credentials:**
+| Field | Value |
+|-------|-------|
+| Username | `devuser` |
+| Password | `devuser` |
+| Email | `devuser@pingme.com` (pre-verified) |
+| Subscription | Base Monthly (active) |
+
+The script is idempotent - safe to run multiple times. It will update an existing devuser if one exists.
+
+> **Note:** This script only works via `meteor shell` which requires local filesystem access. Client-side database modifications are blocked by collection deny rules.
+
 ### Key Documentation
 
 - [Hub & Spoke Strategy](documentation/HUB_SPOKE_STRATEGY.md) - Architecture and SSO flow

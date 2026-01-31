@@ -1,6 +1,9 @@
 {
   "name": "hub",
   "private": true,
+  "engines": {
+    "node": "22.x"
+  },
   "scripts": {
     "start": "meteor run",
     "dev": "meteor --port 3000 --settings settings.development.json",

@@ -22,13 +22,14 @@ For detailed architecture documentation, see [Hub & Spoke Strategy](documentatio
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                         HUB APP                                 │
+│                     HUB APP (port 3000)                         │
 │  • User accounts    • Billing    • SSO tokens    • Spoke API   │
 └─────────────────────────────────────────────────────────────────┘
                 │                               │
                 ▼                               ▼
 ┌───────────────────────────┐   ┌───────────────────────────┐
-│   Spoke: App Skeleton     │   │   Spoke: Backlog Beacon   │
+│  Spoke App Skeleton       │   │  Backlog Beacon           │
+│  (port 3010)              │   │  (port 3020)              │
 └───────────────────────────┘   └───────────────────────────┘
 ```
 
@@ -36,7 +37,7 @@ For detailed architecture documentation, see [Hub & Spoke Strategy](documentatio
 
 ### Prerequisites
 - Meteor 3+
-- Node.js 20+
+- Node.js 22+
 
 ### Installation
 1. Clone the repository
@@ -86,20 +87,42 @@ Set up Lemon Squeezy webhooks for subscription management:
 
 Refer to the [Lemon Squeezy documentation](https://docs.lemonsqueezy.com) and [Billing Documentation](documentation/BILLING.md) for details.
 
-### Spoke App Integration (Future)
-For SSO and Spoke API configuration, see [Hub & Spoke Strategy](documentation/HUB_SPOKE_STRATEGY.md).
+### Spoke App Integration
+Configure spoke apps for SSO in `settings.development.json`:
+```json
+{
+  "private": {
+    "spokeApiKeys": {
+      "spoke_app_skeleton": "your-32-char-random-key",
+      "backlog_beacon": "another-32-char-random-key"
+    },
+    "spokes": {
+      "spoke_app_skeleton": {
+        "url": "http://localhost:3010",
+        "name": "Spoke App Skeleton"
+      }
+    }
+  }
+}
+```
+
+For full SSO architecture, see [Hub & Spoke Strategy](documentation/HUB_SPOKE_STRATEGY.md).
 
 ## Development
 
 ### Project Structure
 ```
 hub/
-├── client/           # Frontend code (Mithril.js components)
-├── server/           # Server-side code, methods, and publications
-├── imports/          # Shared code (UI components, utilities)
-├── lib/              # Collections and shared libraries
+├── client/           # Mithril.js frontend, routing, subscriptions
+├── server/           # Publications, methods, API endpoints, webhooks
+│   ├── api/          # REST API for spoke apps (SSO, subscription checks)
+│   ├── webhooks/     # Lemon Squeezy payment webhooks
+│   ├── migrations/   # Database migrations (quave:migrations)
+│   └── seo/          # Server-side SEO for crawlers
+├── imports/          # Shared UI components and utilities
+├── lib/              # Collections (shared between client/server)
 ├── documentation/    # Project documentation
-├── private/          # Server-only assets (keys, etc.)
+├── private/          # Server-only assets (RSA keys, scripts)
 └── tests/            # Test files
 ```
 
@@ -109,18 +132,21 @@ hub/
 - **Pico CSS** – Minimal CSS framework
 - **MongoDB** – Database
 - **Lemon Squeezy** – Billing and subscriptions
-- **quave:migrations** - For managing changes to the database
+- **RSpack** – Bundler (replacing Webpack)
+- **quave:migrations** – Database migrations
+- **jsonwebtoken** – RS256 JWT for SSO
 
 ### Running Locally
 
 ```bash
 # Start the Hub on port 3000
-meteor --settings settings.development.json
+npm run dev
+# or: meteor --settings settings.development.json
 
 # If running spoke apps simultaneously:
 # Hub: port 3000
-# Spoke App Skeleton: port 3001
-# Backlog Beacon: port 3002
+# Spoke App Skeleton: port 3010
+# Backlog Beacon: port 3020
 ```
 
 ### Creating a Development User

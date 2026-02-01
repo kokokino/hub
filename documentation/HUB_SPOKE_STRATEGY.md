@@ -22,7 +22,7 @@ This document outlines the strategy for extending Kokokino's Hub app to support 
                                     │
                                     ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                         HUB APP (kokokino.com)                          │
+│                    HUB APP (kokokino.com / port 3000)                   │
 │                                                                         │
 │  • User accounts & authentication                                       │
 │  • Billing & subscriptions (Lemon Squeezy)                             │
@@ -30,7 +30,8 @@ This document outlines the strategy for extending Kokokino's Hub app to support 
 │  • Spoke API endpoints                                                  │
 │  • Product & App registry                                               │
 │                                                                         │
-│  MongoDB: users, products, apps, productOwners, appOwners              │
+│  MongoDB: users, products, apps, productOwners, appOwners,             │
+│           spokes, ssoNonces, rateLimits, processedWebhooks             │
 └─────────────────────────────────────────────────────────────────────────┘
                 │                                       │
                 │ SSO Token (RS256 signed)              │ API Calls
@@ -38,12 +39,12 @@ This document outlines the strategy for extending Kokokino's Hub app to support 
                 ▼                                       ▼
 ┌───────────────────────────┐       ┌───────────────────────────┐
 │   SPOKE: App Skeleton     │       │   SPOKE: Backlog Beacon   │
-│   (skeleton.kokokino.com) │       │   (backlog.kokokino.com)  │
+│   (port 3010)             │       │   (port 3020)             │
 │                           │       │                           │
 │   • Validates SSO tokens  │       │   • Game collection mgmt  │
-│   • Checks subscriptions  │       │   • Darkadia CSV import   │
-│   • Demo chat feature     │       │   • 3D bookshelf view     │
-│                           │       │   • Open source game DB   │
+│   • Checks subscriptions  │       │   • IGDB game database    │
+│   • Demo chat feature     │       │   • Darkadia CSV import   │
+│                           │       │   • 3D beanstalk (Babylon)|
 │   Own MongoDB instance    │       │   Own MongoDB instance    │
 └───────────────────────────┘       └───────────────────────────┘
 ```
@@ -339,49 +340,52 @@ Every spoke app must implement:
    - Caching layer for subscription data
    - Error handling and retry logic
 
-### Recommended Structure
+### Actual Structure (from Spoke App Skeleton)
 
 ```
 spoke_app_name/
 ├── .meteor/
-│   ├── packages
-│   ├── platforms
-│   └── release
+│   └── packages
 ├── client/
 │   ├── main.html
 │   ├── main.css
-│   └── main.js
+│   └── main.js              # Mithril routing setup
 ├── imports/
 │   ├── api/
-│   │   └── [app-specific collections]
+│   │   └── collections.js   # ChatMessages, UsedNonces, SubscriptionCache
 │   ├── hub/
-│   │   ├── client.js        # Hub API client
-│   │   ├── ssoHandler.js    # SSO token processing
-│   │   └── subscriptions.js # Subscription checking
+│   │   ├── client.js        # Hub API client (identical across spokes)
+│   │   ├── ssoHandler.js    # SSO token validation (identical across spokes)
+│   │   └── subscriptions.js # Subscription checking with caching
+│   ├── lib/
+│   │   └── collections/
+│   │       └── [app-specific collections]
 │   └── ui/
 │       ├── components/
-│       │   └── RequireSubscription.js  # HOC for protected routes
+│       │   ├── RequireAuth.js         # Redirects if not logged in
+│       │   └── RequireSubscription.js # Redirects if no subscription
 │       ├── layouts/
 │       │   └── MainLayout.js
 │       └── pages/
 │           ├── HomePage.js
+│           ├── SsoCallback.js    # Handles /sso?token=... redirect
 │           ├── NotLoggedIn.js
 │           ├── NoSubscription.js
 │           └── SessionExpired.js
-├── lib/
-│   └── collections/
-│       └── [app-specific]
 ├── server/
-│   ├── main.js
+│   ├── main.js           # Startup, migrations
+│   ├── accounts.js       # Custom SSO login handler
 │   ├── publications.js
-│   └── methods.js
-├── public/
-│   └── [static assets]
-├── private/
-│   └── [server-only assets]
+│   ├── methods.js
+│   ├── indexes.js        # TTL indexes for nonces/cache
+│   ├── rateLimiting.js   # DDP rate limiter config
+│   └── migrations/
+├── tests/
+│   └── main.js
 ├── .gitignore
 ├── package.json
 ├── settings.example.json
+├── CLAUDE.md
 └── README.md
 ```
 
@@ -537,8 +541,8 @@ Meteor.methods({
 Backlog Beacon is a video game collection management app, similar to Darkadia or Backloggery. It allows users to:
 - Track games they own, are playing, or have completed
 - Import collections from Darkadia CSV exports
-- Browse their collection on a 3D rendered bookshelf
-- (Future) Import from Steam, GOG, and other platforms
+- Browse their collection on a 3D beanstalk visualization
+- Import from Steam, GOG, and other platforms via IGDB
 
 ### Subscription Requirements
 
@@ -595,65 +599,9 @@ Meteor.methods({
 });
 ```
 
-#### 3. 3D Bookshelf (Babylon JS)
+#### 3. 3D Beanstalk (Babylon JS)
 
-Using a flyweight/virtual scrolling pattern for performance:
-
-```javascript
-// Only render visible books + buffer
-const VISIBLE_BOOKS = 50;
-const BUFFER_BOOKS = 10;
-
-class BookshelfRenderer {
-  constructor(scene, collection) {
-    this.scene = scene;
-    this.collection = collection; // Full collection data
-    this.bookMeshes = []; // Pool of reusable meshes
-    this.scrollPosition = 0;
-    
-    // Create mesh pool
-    for (let i = 0; i < VISIBLE_BOOKS + BUFFER_BOOKS; i++) {
-      this.bookMeshes.push(this.createBookMesh());
-    }
-  }
-  
-  createBookMesh() {
-    // Create a book-shaped mesh with placeholder texture
-    const book = BABYLON.MeshBuilder.CreateBox('book', {
-      width: 0.15,
-      height: 0.22,
-      depth: 0.03
-    }, this.scene);
-    return book;
-  }
-  
-  updateVisibleBooks() {
-    const startIndex = Math.floor(this.scrollPosition);
-    const visibleGames = this.collection.slice(
-      startIndex, 
-      startIndex + VISIBLE_BOOKS
-    );
-    
-    // Reposition and retexture mesh pool
-    visibleGames.forEach((game, i) => {
-      const mesh = this.bookMeshes[i];
-      mesh.position = this.calculateBookPosition(startIndex + i);
-      this.applyGameTexture(mesh, game);
-      mesh.setEnabled(true);
-    });
-    
-    // Hide unused meshes
-    for (let i = visibleGames.length; i < this.bookMeshes.length; i++) {
-      this.bookMeshes[i].setEnabled(false);
-    }
-  }
-  
-  onScroll(delta) {
-    this.scrollPosition = Math.max(0, this.scrollPosition + delta);
-    this.updateVisibleBooks();
-  }
-}
-```
+The 3D beanstalk visualization uses Babylon.js v8 to render the user's game collection as a growing vine with game covers as leaves/pods. Implementation uses flyweight pattern for performance with large collections.
 
 #### 4. Collection Data Model
 
@@ -699,7 +647,7 @@ CollectionItems = new Mongo.Collection('collectionItems');
 
 ## Implementation Phases
 
-### Phase 1: Hub API Foundation
+### Phase 1: Hub API Foundation ✅ COMPLETE
 
 **Goal:** Add SSO and Spoke API infrastructure to the Hub app.
 
@@ -781,7 +729,7 @@ hub/
 
 ---
 
-### Phase 2: Spoke App Skeleton
+### Phase 2: Spoke App Skeleton ✅ COMPLETE
 
 **Goal:** Create a fully functional template spoke app with SSO and demo features.
 
@@ -885,7 +833,7 @@ spoke_app_skeleton/
 
 ---
 
-### Phase 3: Backlog Beacon (Initial)
+### Phase 3: Backlog Beacon (Initial) ✅ COMPLETE
 
 **Goal:** Fork skeleton and implement core collection management features.
 
@@ -933,9 +881,9 @@ spoke_app_skeleton/
 
 ---
 
-### Phase 4: Backlog Beacon (3D Bookshelf)
+### Phase 4: Backlog Beacon (3D Beanstalk) ✅ COMPLETE
 
-**Goal:** Add the 3D bookshelf visualization using Babylon JS.
+**Goal:** Add the 3D beanstalk visualization using Babylon JS.
 
 **Tasks:**
 
@@ -944,23 +892,23 @@ spoke_app_skeleton/
    - Set up scene and camera
    - Basic lighting
 
-2. **Create Bookshelf Model**
-   - Shelf geometry
-   - Book slot positions
+2. **Create Beanstalk Model**
+   - Stalk and leaf geometry
+   - Video game slot positions
    - Camera controls (pan, zoom)
 
 3. **Implement Flyweight Pattern**
-   - Mesh pool for books
+   - Mesh pool for video games
    - Virtual scrolling logic
    - Texture management
 
-4. **Add Book Rendering**
-   - Book mesh with spine texture
+4. **Add Video Game Rendering**
+   - Video game mesh with spine texture
    - Cover art loading
    - Placeholder for missing art
 
 5. **Add Interactivity**
-   - Click book to view details
+   - Click video game to view details
    - Hover effects
    - Smooth scrolling
 
@@ -1015,8 +963,7 @@ spoke_app_skeleton/
 ~/Documents/programming/kokokino/
 ├── hub/                      # Port 3000
 ├── spoke_app_skeleton/       # Port 3010
-├── backlog_beacon/           # Port 3020
-└── documentation/            # Shared docs (optional)
+└── backlog_beacon/           # Port 3020
 ```
 
 ### Running Multiple Apps
@@ -1024,15 +971,22 @@ spoke_app_skeleton/
 **Terminal 1 - Hub:**
 ```bash
 cd ~/Documents/programming/kokokino/hub
-meteor --settings settings.development.json
+npm run dev
 # Running at http://localhost:3000
 ```
 
-**Terminal 2 - Spoke:**
+**Terminal 2 - Spoke App Skeleton:**
 ```bash
 cd ~/Documents/programming/kokokino/spoke_app_skeleton
-meteor --port 3010 --settings settings.development.json
+npm run dev
 # Running at http://localhost:3010
+```
+
+**Terminal 3 - Backlog Beacon:**
+```bash
+cd ~/Documents/programming/kokokino/backlog_beacon
+npm run dev
+# Running at http://localhost:3020
 ```
 
 ### Development Settings
@@ -1041,14 +995,13 @@ meteor --port 3010 --settings settings.development.json
 ```json
 {
   "public": {
-    "appName": "Kokokino Hub (Dev)"
+    "appName": "Kokokino Hub"
   },
   "private": {
     "MAIL_URL": "smtp://...",
-    "jwtPrivateKeyPath": "private/keys/private.pem",
     "spokeApiKeys": {
-      "spoke_app_skeleton": "dev-skeleton-key-123",
-      "backlog_beacon": "dev-backlog-key-456"
+      "spoke_app_skeleton": "your-32-char-random-key-here",
+      "backlog_beacon": "another-32-char-random-key-here"
     },
     "spokes": {
       "spoke_app_skeleton": {
@@ -1061,7 +1014,9 @@ meteor --port 3010 --settings settings.development.json
       }
     },
     "lemonSqueezy": {
-      "...": "..."
+      "storeId": "...",
+      "apiKey": "...",
+      "lemonSqueezyWebhookSecret": "..."
     }
   }
 }
@@ -1071,13 +1026,30 @@ meteor --port 3010 --settings settings.development.json
 ```json
 {
   "public": {
-    "appName": "Spoke App Skeleton (Dev)",
+    "appName": "Spoke App Skeleton",
     "appId": "spoke_app_skeleton",
     "hubUrl": "http://localhost:3000",
-    "requiredProducts": []
+    "requiredProducts": ["base-monthly"]
   },
   "private": {
-    "hubApiKey": "dev-skeleton-key-123",
+    "hubApiKey": "your-32-char-random-key-here",
+    "hubApiUrl": "http://localhost:3000/api/spoke",
+    "hubPublicKey": "-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----"
+  }
+}
+```
+
+**backlog_beacon/settings.development.json:**
+```json
+{
+  "public": {
+    "appName": "Backlog Beacon",
+    "appId": "backlog_beacon",
+    "hubUrl": "http://localhost:3000",
+    "requiredProducts": ["base-monthly"]
+  },
+  "private": {
+    "hubApiKey": "another-32-char-random-key-here",
     "hubApiUrl": "http://localhost:3000/api/spoke",
     "hubPublicKey": "-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----"
   }
@@ -1211,7 +1183,7 @@ Future feature for community-contributed spokes:
 | **JWT** | JSON Web Token - signed token for SSO |
 | **RS256** | RSA signature with SHA-256 - asymmetric JWT signing |
 | **Nonce** | Number used once - prevents token replay attacks |
-| **Flyweight** | Design pattern for efficiently rendering many similar objects |
+| **Flyweight** | Design pattern for efficiently rendering many similar objects (used in 3D beanstalk, infinite layout, bookshelf layout) |
 
 ---
 
@@ -1226,5 +1198,5 @@ Future feature for community-contributed spokes:
 
 ---
 
-*Last updated: 2025-01-18*
-*Document version: 1.0*
+*Last updated: 2026-01-31*
+*Document version: 2.0*

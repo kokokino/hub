@@ -17,11 +17,14 @@ We focus on simplicity as a super‑power:
 |------------|---------|
 | **JavaScript** | Unified language for both server‑side and browser‑side code |
 | **Meteor JS v3** | Realtime apps, user accounts, and MongoDB integration |
+| **Node.js 22** | Runtime environment (required for Meteor 3.x) |
 | **Meteor Galaxy** | To deploy our apps in the cloud |
 | **Mithril JS v2.3** | General UI, using JavaScript to craft HTML |
-| **Pico CSS** | Concise HTML that looks good with minimal effort |
+| **Pico CSS v2** | Concise HTML that looks good with minimal effort |
+| **RSpack** | Bundler replacing Webpack (faster builds) |
 | **Babylon JS v8** | 3D rendering and physics (with Havok JS built‑in) |
 | **Lemon Squeezy** | Billing and subscription management |
+| **jsonwebtoken** | RS256 JWT signing for SSO between Hub and Spokes |
 
 ## The Hub App
 The **Hub** is the central application users see when visiting `http://kokokino.com`.  
@@ -52,11 +55,50 @@ We welcome contributions from developers, designers, and game creators of all sk
 Check the individual app repositories for contribution guidelines and issue trackers.
 
 ## Meteor style guide
-1. Many older Meteor package won't work since we are focused on Meteor v3 and there are breaking changes mostly around deprecating asynchronous fibers and using modern async/await functions.
-2. Must use async/await pattern with many method calls since we are no longer using fibers for asynchronous calls
+1. Many older Meteor packages won't work since we are focused on Meteor v3 and there are breaking changes mostly around deprecating asynchronous fibers and using modern async/await functions.
+2. Must use async/await pattern with many method calls since we are no longer using fibers for asynchronous calls.
 3. When implementing Meteor calls, subscriptions, publications, collections, etc, please use the modern Meteor v3 API without fibers.
-4. When recommending Atmosphere packages try to pick ones that are Meteor v3 compatible. 
-5. Packages `autopublish` and `insecure` are purposely not installed. They are for rapid prototyping at a hackathon, not for deployed code. Do not suggest for these to be installed and advise developers not to use these packages. 
+4. When recommending Atmosphere packages try to pick ones that are Meteor v3 compatible.
+5. Packages `autopublish` and `insecure` are purposely not installed. They are for rapid prototyping at a hackathon, not for deployed code. Do not suggest for these to be installed and advise developers not to use these packages.
+
+### Collection Method Patterns (Meteor v3)
+Use async collection methods throughout:
+```javascript
+// Finding documents
+await Collection.findOneAsync({ _id: id });
+await Collection.find(query).fetchAsync();
+await Collection.find(query).countAsync();
+
+// Mutations
+await Collection.insertAsync(document);
+await Collection.updateAsync(id, { $set: changes });
+await Collection.removeAsync(id);
+await Collection.upsertAsync(selector, modifier);
+```
+
+### Method Pattern
+```javascript
+Meteor.methods({
+  async 'entity.action'(param) {
+    check(param, String);  // Always validate input
+    if (!this.userId) {
+      throw new Meteor.Error('not-authorized', 'Must be logged in');
+    }
+    const result = await Collection.findOneAsync(query);
+    return result;
+  }
+});
+```
+
+### Publication Pattern
+```javascript
+Meteor.publish('dataName', function() {
+  if (!this.userId) return this.ready();
+  return Collection.find(query, {
+    fields: { sensitiveField: 0 }  // Always use field projection
+  });
+});
+``` 
 
 ## UI style guide
 1. Try to leverage PICO.css design patterns as much as possible so we don't re-invent the wheel. 
@@ -73,5 +115,41 @@ Check the individual app repositories for contribution guidelines and issue trac
 6. Every variable declaration should be on its own line. Do not use the comma syntax to define multiple at once. 
 7. Give every variable a readable word name like "document" and avoid acronyms like "doc" - The only exception is simple counters where a variable like "i" can be acceptable but even then "count" is preferred. 
 
+## Hub & Spoke Conventions
+
+### Port Allocation
+| App | Dev Port |
+|-----|----------|
+| Hub | 3000 |
+| Spoke App Skeleton | 3010 |
+| Backlog Beacon | 3020 |
+
+### SSO Flow
+1. User clicks "Launch" on an app in Hub
+2. Hub generates RS256-signed JWT with user info, subscriptions, and nonce
+3. Browser redirects to spoke's `/sso?token=<JWT>`
+4. Spoke validates signature with Hub's public key
+5. Spoke checks nonce hasn't been used (prevents replay attacks)
+6. Spoke creates local Meteor session via custom login handler
+7. User is authenticated in the spoke app
+
+### Spoke Required Components
+Every spoke app must implement:
+- `/imports/hub/ssoHandler.js` – JWT validation, nonce checking
+- `/imports/hub/client.js` – Hub API client for subscription checks
+- `/imports/hub/subscriptions.js` – Subscription validation logic
+- `/server/accounts.js` – Custom `Accounts.registerLoginHandler` for SSO
+- Auth state pages: `NotLoggedIn`, `NoSubscription`, `SessionExpired`
+
+### Collection Security
+All collections must deny client-side writes:
+```javascript
+Collection.deny({
+  insert: () => true,
+  update: () => true,
+  remove: () => true
+});
+```
+
 ---
-*Last updated: 2026‑01‑18*
+*Last updated: 2026‑01‑31*

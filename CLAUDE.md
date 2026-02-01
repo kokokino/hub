@@ -9,16 +9,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 meteor npm install
 
 # Run development server (port 3000)
-meteor --settings settings.development.json
+npm run dev
+# or: meteor --settings settings.development.json
 
 # Run tests once
-meteor test --once --driver-package meteortesting:mocha
+npm test
 
-# Run tests in watch mode
-TEST_WATCH=1 meteor test --full-app --driver-package meteortesting:mocha
+# Run tests in watch mode (full app)
+npm run test-app
 
 # Bundle size analysis
-meteor --production --extra-packages bundle-visualizer
+npm run visualize
+
+# Create dev user (pre-verified, pre-paid) - requires meteor running
+meteor shell < private/scripts/createDevUser.js
+# Credentials: devuser / devuser
 ```
 
 ## Architecture Overview
@@ -39,9 +44,11 @@ Hub (kokokino.com)                    Spokes
 - `server/api/` - REST API for spoke apps (SSO validation, subscription checks)
 - `server/webhooks/` - Lemon Squeezy payment webhooks
 - `server/migrations/` - Database migrations (quave:migrations)
+- `server/seo/` - Server-side SEO rendering for crawlers (sitemap, meta tags, structured data)
 - `lib/collections/` - MongoDB collections (shared between client/server)
 - `imports/ui/` - Mithril components and pages
 - `private/keys/` - RSA keypair for JWT signing (never committed)
+- `private/scripts/` - Utility scripts (e.g., createDevUser.js)
 
 **Authentication Flow**:
 1. User logs in at Hub
@@ -57,6 +64,12 @@ Hub (kokokino.com)                    Spokes
 - `productOwners/appOwners` - Many-to-many ownership relationships
 - `spokes` - Spoke app registry
 - `ssoNonces` - SSO token replay prevention
+- `rateLimits` - API rate limiting tracking
+- `cronLocks` - Distributed cron job locks
+- `processedWebhooks` - Webhook deduplication
+
+**Client Routing** (Mithril.js):
+Routes defined in `client/main.js` - all routes render through the `App` component which selects the appropriate page based on `m.route.get()`. Use `routeLink()` helper from `imports/utils.js` for navigation links.
 
 ## Tech Stack and Conventions
 
@@ -96,3 +109,100 @@ Settings files are not committed. Copy `settings.example.json` to `settings.deve
 - `private.spokes` - Spoke URLs and names
 
 RSA keys for JWT signing go in `private/keys/` (or `Meteor.settings.private.jwtPrivateKey`).
+
+## Code Patterns
+
+### Meteor Methods
+```javascript
+Meteor.methods({
+  async 'collection.action'(param) {
+    check(param, String);                                    // Always validate input
+    if (!this.userId) {
+      throw new Meteor.Error('not-authorized', 'Must be logged in');
+    }
+    const data = await Collection.findOneAsync(query);       // Use async methods
+    if (!data) {
+      throw new Meteor.Error('not-found', 'Resource not found');
+    }
+    return result;                                           // Single return at end
+  }
+});
+```
+
+### Publications
+```javascript
+Meteor.publish('dataName', function() {
+  if (!this.userId) return this.ready();                     // Auth check
+  return Collection.find(query, {
+    fields: { sensitiveField: 0 }                            // Always use field projection
+  });
+});
+```
+
+### Mithril Components
+```javascript
+const Component = {
+  oninit(vnode) {
+    this.handle = Meteor.subscribe('data');                  // Subscribe
+    this.computation = Tracker.autorun(() => {               // Reactive tracking
+      this.data = Collection.findOne();
+      m.redraw();                                            // Trigger re-render
+    });
+  },
+  onremove() {
+    if (this.computation) this.computation.stop();           // Always cleanup
+    if (this.handle) this.handle.stop();
+  },
+  view(vnode) {
+    return m('div', this.data?.name);
+  }
+};
+```
+
+### Collections (lib/collections/)
+```javascript
+export const Items = new Mongo.Collection('items');
+Items.deny({                                                 // Block all client writes
+  insert: () => true,
+  update: () => true,
+  remove: () => true
+});
+```
+
+### REST API Endpoints (server/api/)
+```javascript
+function sendJson(res, statusCode, data) {
+  res.writeHead(statusCode, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify(data));
+}
+
+WebApp.connectHandlers.use(async (req, res, next) => {
+  if (!req.url.startsWith('/api/')) return next();
+  // CORS, auth middleware, then route handling
+  sendJson(res, 200, { success: true });
+});
+```
+
+### Webhook Idempotency
+Webhooks use unique index on `webhookKey` (eventType + objectId + timestamp). Insert attempt catches duplicate key error (code 11000) to skip already-processed webhooks.
+
+### Migrations (server/migrations/)
+```javascript
+Migrations.add({
+  version: 1,
+  name: 'Description',
+  up: async function() {
+    const existing = await Collection.findOneAsync(query);   // Idempotency check
+    if (existing) return;
+    await Collection.insertAsync(data);
+  },
+  down: async function() { /* rollback */ }
+});
+```
+
+### SEO (server/seo/)
+Crawler detection via user-agent patterns. Pre-renders HTML with meta tags, OpenGraph, and JSON-LD structured data for search engines. Non-crawlers get the SPA.
+
+### Utility Helpers (imports/utils.js)
+- `isVerifiedUser(user)` - Check email verification status
+- `routeLink(path)` - Mithril link attrs that use client-side routing

@@ -223,7 +223,12 @@ const AppsList = {
               href: app.gitHubUrl,
               target: '_blank',
               rel: 'noopener noreferrer'
-            }, 'GitHub')] : null
+            }, 'GitHub')] : null,
+            app.youtubeUrl ? [' · ', m('a', {
+              href: app.youtubeUrl,
+              target: '_blank',
+              rel: 'noopener noreferrer'
+            }, 'Watch Demo')] : null
           ]))
         ])
       ]);

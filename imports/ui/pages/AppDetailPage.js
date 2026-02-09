@@ -3,7 +3,7 @@ import { Tracker } from 'meteor/tracker';
 import { Meteor } from 'meteor/meteor';
 import { Apps } from '/lib/collections/apps';
 import { Products } from '/lib/collections/products';
-import { routeLink } from '/imports/utils.js';
+import { routeLink, extractYouTubeVideoId } from '/imports/utils.js';
 
 const AppDetailPage = {
   oninit(vnode) {
@@ -171,6 +171,19 @@ const AppDetailPage = {
         m('h2', 'About This App'),
         m('p', this.app.description)
       ]),
+
+      this.app.youtubeUrl ? m('article', [
+        m('h2', 'Demo Video'),
+        m('div', { style: 'position: relative; width: 100%; padding-bottom: 56.25%;' }, [
+          m('iframe', {
+            src: `https://www.youtube-nocookie.com/embed/${extractYouTubeVideoId(this.app.youtubeUrl)}`,
+            title: `${this.app.name} demo video`,
+            style: 'position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;',
+            allow: 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture',
+            allowfullscreen: true
+          })
+        ])
+      ]) : null,
 
       m('article', [
         m('h2', 'Details'),

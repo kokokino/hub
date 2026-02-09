@@ -13,6 +13,21 @@ export function isVerifiedUser(user) {
 }
 
 /**
+ * Extract the video ID from a YouTube URL
+ * Handles both youtu.be/ID and youtube.com/watch?v=ID formats
+ * @param {string} url - A YouTube URL
+ * @returns {string|null} The video ID, or null if not a valid YouTube URL
+ */
+export function extractYouTubeVideoId(url) {
+  if (!url) return null;
+  const shortMatch = url.match(/youtu\.be\/([a-zA-Z0-9_-]+)/);
+  if (shortMatch) return shortMatch[1];
+  const longMatch = url.match(/youtube\.com\/watch\?.*v=([a-zA-Z0-9_-]+)/);
+  if (longMatch) return longMatch[1];
+  return null;
+}
+
+/**
  * Helper function for route links
  * @param {string} path - The route path
  * @returns {Object} An object with href and onclick properties

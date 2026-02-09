@@ -107,11 +107,13 @@ Meteor.publish('apps', function() {
   }, {
     fields: {
       name: 1,
+      slug: 1,
       description: 1,
       productId: 1,
       spokeId: 1,
       ageRating: 1,
       gitHubUrl: 1,
+      youtubeUrl: 1,
       isActive: 1,
       isApproved: 1
     }

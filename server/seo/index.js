@@ -101,7 +101,7 @@ WebApp.connectHandlers.use(async (req, res, next) => {
   }
 
   const crawlerName = getCrawlerName(userAgent);
-  console.log(`SEO: Crawler detected (${crawlerName || 'unknown'}), serving pre-rendered content for: ${path}`);
+  // console.log(`SEO: Crawler detected (${crawlerName || 'unknown'}), serving pre-rendered content for: ${path}`);
 
   try {
     const html = await renderForPath(path);

@@ -17,7 +17,7 @@ const HomePage = {
       if (this.ready) {
         // Find the base product (required product)
         this.baseProduct = Products.findOne({ isRequired: true, isActive: true });
-        console.log('HomePage: baseProduct:', this.baseProduct);
+        // console.log('HomePage: baseProduct:', this.baseProduct);
       }
       m.redraw();
     });

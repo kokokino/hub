@@ -45,7 +45,7 @@ const verificationStore = {
 };
 
 // Global subscriptions with logging
-console.log('Setting up global subscriptions');
+// console.log('Setting up global subscriptions');
 const currentUserHandle = Meteor.subscribe('currentUser');
 const productsHandle = Meteor.subscribe('products');
 const appsHandle = Meteor.subscribe('apps');
@@ -56,22 +56,22 @@ Tracker.autorun(() => {
   const productsReady = productsHandle.ready();
   const appsReady = appsHandle.ready();
   
-  console.log('Subscription status - currentUser:', currentUserReady, 'products:', productsReady, 'apps:', appsReady);
+  // console.log('Subscription status - currentUser:', currentUserReady, 'products:', productsReady, 'apps:', appsReady);
   
   if (productsReady) {
     const productCount = Products.find().count();
-    console.log(`Client received ${productCount} products`);
-    Products.find().forEach(product => {
-      console.log('Product:', product.name, product._id);
-    });
+    // console.log(`Client received ${productCount} products`);
+    // Products.find().forEach(product => {
+    //   console.log('Product:', product.name, product._id);
+    // });
   }
   
   if (appsReady) {
     const appCount = Apps.find().count();
-    console.log(`Client received ${appCount} apps`);
-    Apps.find().forEach(app => {
-      console.log('App:', app.name, app._id);
-    });
+    // console.log(`Client received ${appCount} apps`);
+    // Apps.find().forEach(app => {
+    //   console.log('App:', app.name, app._id);
+    // });
   }
 });
 

@@ -7,3 +7,4 @@ import './6_add_app_slugs.js';
 import './7_add_product_slugs.js';
 import './8_add_youtube_urls.js';
 import './9_add_talon_and_lance.js';
+import './10_add_talon_lance_github.js';

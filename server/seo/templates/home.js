@@ -45,7 +45,7 @@ export async function renderHomePage() {
     return `
       <article class="app-card">
         <h3><a href="${DOMAIN}/apps/${slug}">${escapeHtml(app.name)}</a></h3>
-        <p>${escapeHtml(app.description)}</p>
+        ${app.description}
         <footer>
           <small>
             Included in ${escapeHtml(productName)}

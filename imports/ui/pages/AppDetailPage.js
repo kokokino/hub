@@ -169,7 +169,7 @@ const AppDetailPage = {
 
       m('article', [
         m('h2', 'About This App'),
-        m('p', this.app.description)
+        m('div', m.trust(this.app.description))
       ]),
 
       this.app.youtubeUrl ? m('article', [

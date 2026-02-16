@@ -45,7 +45,7 @@ export async function renderAppDetailPage(slug) {
 
       <section>
         <h2>About This App</h2>
-        <p>${escapeHtml(app.description)}</p>
+        ${app.description}
       </section>
 
       <section>

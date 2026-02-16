@@ -67,7 +67,7 @@ export function getMetaTags(path, data = {}) {
       return {
         ...defaultMeta,
         title: `${data.app.name} - Kokokino`,
-        description: data.app.description || `Play ${data.app.name} on Kokokino, the open source game platform.`,
+        description: stripHtml(data.app.description) || `Play ${data.app.name} on Kokokino, the open source game platform.`,
         keywords: `${data.app.name}, kokokino game, web game, ${data.app.ageRating || ''} rated`,
         url: `${DOMAIN}${path}`,
         type: 'article'
@@ -123,6 +123,16 @@ export function generateMetaTagsHtml(meta) {
   tags.push(`<link rel="canonical" href="${escapeHtml(meta.url)}">`);
 
   return tags.join('\n    ');
+}
+
+/**
+ * Strip HTML tags from a string
+ * @param {string} str - String that may contain HTML
+ * @returns {string} Plain text string
+ */
+function stripHtml(str) {
+  if (!str) return '';
+  return str.replace(/<[^>]*>/g, '');
 }
 
 /**

@@ -215,7 +215,9 @@ const AppsList = {
                 disabled: isLaunching || !hasSso
               }, isLaunching ? 'Launching...' : (hasSso ? 'Launch' : 'Coming Soon'))
             : m('p', m('small', m('em', launchInstructions))),
-          m('p.app-description.truncated', app.description),
+          m('p.app-description.truncated', m.trust(
+            (app.description || '').replace(/<\/p>\s*<p>/g, '<br><br>').replace(/<\/?p>/g, '')
+          )),
           m('a.read-more-link', routeLink(`/apps/${appSlug}`), 'Read more'),
           m('footer', m('small', [
             `Included in ${productName}`,

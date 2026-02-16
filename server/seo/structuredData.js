@@ -4,6 +4,11 @@
 
 const DOMAIN = 'https://kokokino.com';
 
+function stripHtml(str) {
+  if (!str) return '';
+  return str.replace(/<[^>]*>/g, '');
+}
+
 /**
  * Generate Organization schema
  * @returns {Object} Organization JSON-LD
@@ -55,7 +60,7 @@ export function generateAppSchema(app, product = null) {
     '@context': 'https://schema.org',
     '@type': 'WebApplication',
     name: app.name,
-    description: app.description,
+    description: stripHtml(app.description),
     url: `${DOMAIN}/apps/${slug}`,
     applicationCategory: 'GameApplication',
     operatingSystem: 'Web Browser',
@@ -167,7 +172,7 @@ export function generateAppListSchema(apps) {
         item: {
           '@type': 'WebApplication',
           name: app.name,
-          description: app.description,
+          description: stripHtml(app.description),
           url: `${DOMAIN}/apps/${slug}`
         }
       };
